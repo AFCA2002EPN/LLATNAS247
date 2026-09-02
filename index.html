@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orden de servicio | Llantas 247</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    #order-form[hidden], #technician-panel[hidden] { display: none; }
+    .technical-details { padding: 20px; display: grid; gap: 16px; }
+    .technical-details h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; }
+    .technical-details .field-grid { padding: 0; margin: 0; }
+    .brand-custom[hidden] { display: none; }
+    .checklist-help { margin: 14px 20px 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .technical-notes { width: 100%; min-height: 96px; resize: vertical; }
+    .password-field { position: relative; }
+    .password-field input { padding-right: 92px; }
+    .password-field button { position: absolute; right: 8px; bottom: 8px; border: 0; background: transparent; color: var(--red); font-weight: 700; cursor: pointer; }
+    .technician-save { margin: 0 20px 20px; width: calc(100% - 40px); }
+    .technician-message { display: block; text-align: center; color: var(--green); font-weight: 600; min-height: 20px; }
+    #order-summary-panel[hidden] { display: none; }
+    .order-summary-table { width: calc(100% - 40px); margin: 20px; border-collapse: collapse; }
+    .order-summary-table th, .order-summary-table td { padding: 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .order-summary-table th { width: 32%; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+    .summary-actions { display: flex; gap: 12px; padding: 0 20px 20px; }
+    .print-button { border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); padding: 0 18px; font-weight: 700; cursor: pointer; }
+    @media print { .topbar, .page-heading, footer, .views, #order-form, #technician-panel, .summary-actions { display: none !important; } #order-summary-panel { display: block !important; border: 0; box-shadow: none; } body { background: #fff; } }
+    .check-row { min-height: 44px; gap: 10px; padding: 0 13px; }
+    .check-row input { position: static; opacity: 1; width: 17px; height: 17px; accent-color: var(--red); flex: 0 0 auto; }
+    .check-row:has(input:checked) { border-color: #ffafb3; background: #fff3f3; }
+    .check-row .check-toggle { display: none; }
+    .pending-badge { background: #edf2f8 !important; color: var(--muted) !important; }
+    .pending-badge.complete { background: #d9f8ed !important; color: #008b62 !important; }
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#" aria-label="Llantas 247"><img src="assets/images/llantas247_logo.jpg" alt="Llantas 247" style="display:block;width:100%;height:100%;object-fit:contain;padding:4px" /></a>
+  <nav class="views" aria-label="Vistas del sistema">
+    <button class="view-button active" data-view="seller">Vista del vendedor</button>
+    <button class="view-button" data-view="technician">Vista del técnico</button>
+  </nav>
+  <div class="shop-status"><span>TALLER ACTIVO</span><strong>#ORD-2024-0047</strong><em><i></i> En línea</em></div>
+</header>
+<main>
+  <section class="page-heading"><div><p class="kicker" id="heading-kicker">Formulario de creación</p><h1 id="page-title">Nueva Orden de Servicio</h1></div><div class="heading-meta"><span>FECHA<strong>02 de septiembre de 2026</strong></span><span>SUCURSAL<strong>Bogotá - Norte</strong></span></div></section>
+  <form id="order-form" class="workspace">
+    <div class="column left-column"><section class="panel client-panel"><div class="panel-title">Datos del cliente</div><div class="field-grid single">
+      <label>Fecha<input id="order-date" type="date"></label><label>Nombre del cliente<input id="customer-name" name="cliente" required></label><label>Correo electrónico<input id="customer-email" type="email"></label><label>Teléfono<input id="customer-phone" type="tel"></label><label>Asesor de ventas<select id="salesperson"><option value="">Seleccione un asesor</option><option>Catalina Vega</option><option>Andrés Morales</option></select></label><label>Cantidad de llantas<input id="tire-quantity" type="number" min="1"></label>
+    </div></section></div>
+    <div class="column middle-column"><section class="panel tire-panel"><div class="panel-title">Llanta nueva</div><label>Marca<select id="new-brand" class="brand-select"><option value="">Seleccione una marca</option><option>ENVOY</option><option>DAVANTI</option><option>Michelin</option><option>Bridgestone</option><option>Goodyear</option><option>Otra marca</option></select></label><label class="brand-custom" hidden>Escriba la marca<input type="text" placeholder="Nombre de la marca"></label><div class="field-grid tire-fields"><label>Ancho (mm)<input id="tire-width" type="number"></label><label>Alto (%)<input id="tire-height" type="number"></label><label>Rin (pulg.)<input id="tire-rim" type="number"></label></div><div class="tire-measure"><span>MEDIDA</span><strong id="tire-result">-</strong><span class="wheel">◎</span></div></section><section class="panel notes-panel"><div class="panel-title">Observaciones del vendedor</div><textarea placeholder="Escriba observaciones..."></textarea></section></div>
+    <div class="column right-column"><section class="panel services-panel"><div class="panel-title with-badge">Servicios contratados <b id="service-count">0 seleccionados</b></div><div class="option-list" id="services-list">
+      <label class="option"><input type="checkbox" value="Enllantaje - Balanceo"><span class="fake-check"></span><span>Enllantaje - Balanceo</span><small>INC</small></label><label class="option"><input type="checkbox" value="Alineación"><span class="fake-check"></span><span>Alineación</span></label><label class="option"><input type="checkbox" value="Válvulas"><span class="fake-check"></span><span>Válvulas</span></label><label class="option"><input type="checkbox" value="Nitrógeno"><span class="fake-check"></span><span>Nitrógeno</span></label><label class="option"><input type="checkbox" value="Cambiar caster"><span class="fake-check"></span><span>Cambiar caster</span></label>
+    </div><label class="other-field">Otros<textarea id="other-service" placeholder="Detalle otros servicios..."></textarea></label></section><section class="panel summary-panel"><div class="panel-title">Resumen</div><div id="summary" class="summary"><span>No hay servicios seleccionados</span></div></section><button class="save-button" type="submit"><span>▣</span> Guardar orden</button><output id="save-message" class="save-message" aria-live="polite"></output></div>
+  </form>
+  <section class="technician-section panel" id="technician-panel" hidden><div class="panel-title">Datos para instalación</div><div class="technical-details"><div class="field-grid"><label>Placa<input id="license-plate" type="text" placeholder="Ingrese la placa" maxlength="10" style="text-transform:uppercase"></label><label>Kilometraje<input type="number" min="0" placeholder="Ingrese el kilometraje"></label><label class="password-field">Código de alarma<input id="alarm-code" type="password" placeholder="Ingrese el código"><button type="button" id="toggle-alarm" aria-label="Mostrar código de alarma">Mostrar</button></label></div><div class="panel-title" style="padding:0 0 10px">Detalle de llanta vieja</div><label>Marca<select class="brand-select"><option>ENVOY</option><option>DAVANTI</option><option>Michelin</option><option>Bridgestone</option><option>Goodyear</option><option>Otra marca</option></select></label><label class="brand-custom" hidden>Escriba la marca<input type="text" placeholder="Nombre de la marca"></label><div class="field-grid tire-fields"><label>Ancho (mm)<input id="old-tire-width" type="number" placeholder="215"></label><label>Alto (%)<input id="old-tire-height" type="number" placeholder="55"></label><label>Rin (pulg.)<input id="old-tire-rim" type="number" placeholder="17"></label></div><div class="tire-measure"><span>MEDIDA</span><strong id="old-tire-result">-</strong><span class="wheel">◎</span></div><label>Fecha de fabricación<input type="date"></label></div><div class="panel-title with-badge">Elementos presentes al recibir el vehículo <b class="pending-badge" id="checklist-status">0 presentes</b></div><p class="checklist-help">Marque únicamente los elementos que el vehículo trae al ingresar. Si falta alguno o llega incompleto, anótelo en observaciones de ingreso.</p><div class="checklist" id="checklist">
+    <label class="check-row"><input type="checkbox" value="Tapacubos"><span>Tapacubos</span></label><label class="check-row"><input type="checkbox" value="Tapa válvulas"><span>Tapa válvulas</span></label><label class="check-row"><input type="checkbox" value="Llanta de emergencia"><span>Llanta de emergencia</span></label><label class="check-row"><input type="checkbox" value="Tuerca seguridad"><span>Tuerca seguridad</span></label><label class="check-row"><input type="checkbox" value="Testigo de llantas encendido"><span>Testigo de llantas encendido</span></label><label class="check-row"><input type="checkbox" value="Control de garaje"><span>Control de garaje</span></label><label class="check-row"><input type="checkbox" value="Cargador celular"><span>Cargador celular</span></label><label class="check-row"><input type="checkbox" value="Testigo de check engine"><span>Testigo de check engine</span></label><label class="check-row"><input type="checkbox" value="Sensor de aire"><span>Sensor de aire</span></label>
+  </div><div class="technical-details"><label>Observaciones de ingreso<textarea class="technical-notes" placeholder="Anote cantidades o novedades. Ejemplo: llegó con 3 tapacubos y sin tuerca de seguridad."></textarea></label></div><button class="save-button technician-save" type="button" id="save-technician">Guardar orden de instalación</button><output id="technician-message" class="technician-message" aria-live="polite"></output></section>
+</main><section class="panel" id="order-summary-panel" hidden><div class="panel-title with-badge">Resumen de la orden <b id="summary-order-number">#ORD-2024-0047</b></div><table class="order-summary-table"><tbody id="order-summary-body"></tbody></table><div class="summary-actions"><button class="save-button" type="button" id="print-order">Imprimir / Guardar PDF</button></div></section><footer>llantas247.com · Sistema de Gestión de Taller <span>v2.4.1</span></footer><script src="script.js"></script>
+</body></html>
