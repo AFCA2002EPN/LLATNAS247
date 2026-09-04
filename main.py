@@ -57,22 +57,23 @@ def conectar():
         port=os.getenv("LLANTAS_DB_PORT", "5432"),
     )
 
-
 def enviar_correo(destinatario, asunto, contenido):
-    remitente = os.getenv("LLANTAS_GMAIL_USER", "sistemas@llantas247.com")
-    app_password = os.getenv("LLANTAS_GMAIL_APP_PASSWORD")
-    if not app_password:
-        raise HTTPException(status_code=503, detail="Falta configurar LLANTAS_GMAIL_APP_PASSWORD.")
+    # 1. El remitente oficial del taller
+    remitente = "sistemas@llantas247.com" 
+    
+    # 2. Tu clave de aplicación unida sin espacios
+    app_password = "sbrkrfigzaheyltl" 
+    
     mensaje = EmailMessage()
     mensaje["From"] = remitente
     mensaje["To"] = destinatario
     mensaje["Subject"] = asunto
     mensaje.set_content(contenido)
+    
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as servidor:
         servidor.login(remitente, app_password)
         servidor.send_message(mensaje)
-
-
+        
 def preparar_tabla(cursor):
     cursor.execute("CREATE SEQUENCE IF NOT EXISTS ordenes_numero_seq")
     cursor.execute("ALTER TABLE ordenes ADD COLUMN IF NOT EXISTS numero_orden VARCHAR(30)")

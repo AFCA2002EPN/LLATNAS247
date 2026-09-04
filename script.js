@@ -212,6 +212,70 @@ document.addEventListener('DOMContentLoaded', () => {
     consentWarning.hidden = approved === visibleRows.length;
     consentWarning.textContent = `Faltan ${visibleRows.length - approved} consentimiento(s) para completar la orden.`;
   }
+
+  // --- POLLING DE CONSENTIMIENTOS EN TIEMPO REAL ---
+  let consentPollingInterval = null;
+
+  function stopConsentPolling() {
+    if (consentPollingInterval) {
+      clearInterval(consentPollingInterval);
+      consentPollingInterval = null;
+    }
+  }
+
+  function showConsentToast(role, estado) {
+    const toast = document.createElement('div');
+    const esAprobado = estado === 'aprobado';
+    toast.style.cssText = `position:fixed;bottom:28px;right:28px;z-index:9999;padding:14px 20px;border-radius:10px;font:700 14px 'Space Grotesk',sans-serif;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.22);display:flex;align-items:center;gap:10px;transition:opacity .4s;background:${esAprobado ? '#00bd7b' : '#ed0010'}`;
+    toast.innerHTML = `<span style="font-size:20px">${esAprobado ? '✅' : '❌'}</span> <span>${role} ha <strong>${esAprobado ? 'APROBADO' : 'RECHAZADO'}</strong> la orden</span>`;
+    document.body.append(toast);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 4500);
+  }
+
+  function syncConsentFromDB(consentimientosBD) {
+    let changed = false;
+    consentRows.forEach(({ id, role }) => {
+      const row = consentList.querySelector(`[data-consent-id="${id}"]`);
+      let datosGuardados = consentimientosBD[id] || null;
+      if (datosGuardados) {
+        const estadoBD = datosGuardados.estado;
+        const nuevoStatus = estadoBD === 'aprobado' ? 'approved' : (estadoBD === 'rechazado' ? 'rejected' : 'pending');
+        if (row.dataset.status !== nuevoStatus && nuevoStatus !== 'pending') {
+          changed = true;
+          const statusLabel = row.querySelector('.consent-status');
+          row.dataset.status = nuevoStatus;
+          statusLabel.textContent = nuevoStatus === 'approved' ? 'Aprobado' : 'Rechazado';
+          statusLabel.classList.remove('approved', 'rejected', 'pending');
+          statusLabel.classList.add(nuevoStatus);
+          // Flash visual en la fila
+          row.style.transition = 'background .3s, border-color .3s';
+          row.style.background = nuevoStatus === 'approved' ? '#d9f8ed' : '#fff3f3';
+          row.style.borderColor = nuevoStatus === 'approved' ? '#00bd7b' : '#ed0010';
+          setTimeout(() => { row.style.background = ''; row.style.borderColor = ''; }, 2500);
+          showConsentToast(role, estadoBD);
+        }
+      }
+    });
+    if (changed) updateConsentState();
+  }
+
+  function startConsentPolling(numeroOrden) {
+    stopConsentPolling();
+    consentPollingInterval = setInterval(async () => {
+      // Detener si ya no hay filas pendientes
+      const visibles = [...consentList.querySelectorAll('.consent-row:not([hidden])')]; 
+      const hayPendientes = visibles.some((row) => !['approved', 'rejected'].includes(row.dataset.status));
+      if (!hayPendientes) { stopConsentPolling(); return; }
+      try {
+        const res = await fetch(`http://localhost:8001/api/orden/${encodeURIComponent(numeroOrden)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.instalacion?.consentimientos) syncConsentFromDB(data.instalacion.consentimientos);
+      } catch { /* silencioso */ }
+    }, 5000);
+  }
+  // --- FIN POLLING ---
+
   licensePlate.addEventListener('input', () => {
     licensePlate.value = licensePlate.value.toUpperCase();
   });
@@ -295,9 +359,32 @@ document.addEventListener('DOMContentLoaded', () => {
           if (quantity) quantity.value = savedItem?.match(/: (\d+)$/)?.[1] || '';
         });
       }
+      // --- LEER CONSENTIMIENTOS DESDE POSTGRESQL ---
+      if (order.instalacion && order.instalacion.consentimientos) {
+        const consentimientosBD = order.instalacion.consentimientos;
+        consentRows.forEach(({ id }) => {
+          const row = consentList.querySelector(`[data-consent-id="${id}"]`);
+          let datosGuardados = null;
+          if (id === 'client') datosGuardados = consentimientosBD['client'];
+          if (id === 'advisor') datosGuardados = consentimientosBD['advisor'];
+          if (datosGuardados) {
+            const estadoBD = datosGuardados.estado; // 'pendiente', 'aprobado' o 'rechazado'
+            const statusLabel = row.querySelector('.consent-status');
+            row.dataset.status = estadoBD === 'aprobado' ? 'approved' : (estadoBD === 'rechazado' ? 'rejected' : 'pending');
+            statusLabel.textContent = estadoBD === 'aprobado' ? 'Aprobado' : (estadoBD === 'rechazado' ? 'Rechazado' : 'Pendiente');
+            statusLabel.classList.remove('approved', 'rejected', 'pending');
+            if (estadoBD === 'aprobado') statusLabel.classList.add('approved');
+            if (estadoBD === 'rechazado') statusLabel.classList.add('rejected');
+          }
+        });
+        updateConsentState();
+      }
+      // --- FIN DE LEER CONSENTIMIENTOS ---
       checklistStatus.textContent = `${checklistInputs.filter((input) => input.checked).length} presentes`;
       document.querySelector('#order-summary-panel').hidden = true;
       lookupMessage.textContent = `✓ Orden ${order.numero_orden} cargada.`;
+      // Iniciar polling para detectar aprobaciones en tiempo real
+      startConsentPolling(order.numero_orden);
     } catch (error) {
       lookupMessage.textContent = `Error: ${error.message}`;
     }
@@ -494,6 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   newInstallationOrderButton.addEventListener('click', () => {
+    stopConsentPolling(); // Cancelar polling al limpiar la orden
     if (!window.confirm('Se limpiaran los datos de la pantalla para crear una nueva orden. La orden ya guardada no se borrara.')) return;
     document.querySelector('#order-form').reset();
     technicianPanel.querySelectorAll('input, textarea, select').forEach((field) => {
