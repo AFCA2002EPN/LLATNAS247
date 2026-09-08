@@ -145,8 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const row = document.createElement('div');
     row.className = 'consent-row';
     row.dataset.consentId = id;
-    row.innerHTML = `<strong class="consent-role">${role}</strong><input type="email" class="consent-email" placeholder="Correo electronico" aria-label="Correo de ${role}"><span class="consent-status">Pendiente</span><div class="consent-actions"><button type="button" class="consent-button notify-button">Notificar</button><button type="button" class="consent-button approve-button">Aprobar</button><button type="button" class="consent-button reject-button">Rechazar</button></div><p class="consent-note">${id === 'client' || id === 'advisor' ? 'Notificacion por correo disponible.' : 'Notificacion de tecnicos pendiente por ahora.'}</p>`;
-    if (id !== 'client' && id !== 'advisor') row.querySelector('.notify-button').disabled = true;
+    row.innerHTML = `<strong class="consent-role">${role}</strong><input type="email" class="consent-email" placeholder="Correo electronico" aria-label="Correo de ${role}"><span class="consent-status">Pendiente</span><div class="consent-actions"><button type="button" class="consent-button notify-button">Notificar</button><button type="button" class="consent-button approve-button">Aprobar</button><button type="button" class="consent-button reject-button">Rechazar</button></div><p class="consent-note">Notificacion por correo disponible.</p>`;
     row.querySelector('.consent-email').value = email || '';
     const savedStatus = savedConsent[id]?.status;
     if (savedStatus) {
