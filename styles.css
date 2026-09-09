@@ -431,3 +431,7 @@
 .print-order-button span {
   font-size: 16px;
 }
+
+.consent-status.notified { color: #2563eb; font-weight: 700; }
+.consent-status.approved { color: #00bd7b; font-weight: 700; }
+.consent-status.rejected { color: #ed0010; font-weight: 700; }

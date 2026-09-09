@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadNextOrderNumber();
 
   const style = document.createElement('style');
-  style.textContent = '.salesperson-custom[hidden]{display:none}.dot-code{max-width:160px;text-transform:uppercase;letter-spacing:.16em}.invoice-header{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:24px 20px;background:linear-gradient(120deg,#10182e,#1e2c4d);color:#fff}.invoice-brand{width:112px;height:64px;padding:7px;border-radius:6px;background:#fff;object-fit:contain}.invoice-heading{margin:0;font-size:22px}.invoice-kicker{margin:5px 0 0;color:#9fb0cc;font:10px IBM Plex Mono,monospace;text-transform:uppercase;letter-spacing:.14em}.invoice-number{color:#fff;font:700 15px IBM Plex Mono,monospace;white-space:nowrap}.invoice-accent{height:5px;background:#ed0010}.consent-panel{margin-top:24px}.consent-intro{margin:0 20px 18px;color:var(--muted);line-height:1.5}.consent-list{display:grid;gap:10px;padding:0 20px 20px}.consent-row{display:grid;grid-template-columns:minmax(170px,1fr) minmax(180px,1fr) 112px auto;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:6px}.consent-row[hidden]{display:none}.consent-role{font-weight:700}.consent-row input{width:100%;min-width:0}.consent-status{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}.consent-status.approved{color:var(--green)}.consent-status.rejected{color:var(--red)}.consent-actions{display:flex;gap:6px}.consent-button{border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer}.consent-button:hover{border-color:var(--red);color:var(--red)}.consent-note{grid-column:1/-1;margin:0;color:var(--muted);font-size:11px}.consent-warning{display:block;margin:0 20px 20px;color:var(--red);font-weight:700}.consent-warning[hidden]{display:none}@media(max-width:720px){.consent-row{grid-template-columns:1fr}.consent-actions{justify-content:flex-start}}@media print{.invoice-header{print-color-adjust:exact;-webkit-print-color-adjust:exact}.invoice-brand{width:100px;height:56px}.order-summary-table{font-size:11px}.consent-panel{break-inside:avoid}}';
+  style.textContent = '.salesperson-custom[hidden]{display:none}.dot-code{max-width:160px;text-transform:uppercase;letter-spacing:.16em}.invoice-header{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:24px 20px;background:linear-gradient(120deg,#10182e,#1e2c4d);color:#fff}.invoice-brand{width:112px;height:64px;padding:7px;border-radius:6px;background:#fff;object-fit:contain}.invoice-heading{margin:0;font-size:22px}.invoice-kicker{margin:5px 0 0;color:#9fb0cc;font:10px IBM Plex Mono,monospace;text-transform:uppercase;letter-spacing:.14em}.invoice-number{color:#fff;font:700 15px IBM Plex Mono,monospace;white-space:nowrap}.invoice-accent{height:5px;background:#ed0010}.consent-panel{margin-top:24px}.consent-intro{margin:0 20px 18px;color:var(--muted);line-height:1.5}.consent-list{display:grid;gap:10px;padding:0 20px 20px}.consent-row{display:grid;grid-template-columns:minmax(170px,1fr) minmax(180px,1fr) 112px auto;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:6px}.consent-row[hidden]{display:none}.consent-role{font-weight:700}.consent-row input{width:100%;min-width:0}.consent-status{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}.consent-status.notified{color:#2563eb}.consent-status.approved{color:#00bd7b}.consent-status.rejected{color:#ed0010}.consent-actions{display:flex;gap:6px}.consent-button{border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer}.consent-button:hover{border-color:var(--red);color:var(--red)}.consent-note{grid-column:1/-1;margin:0;color:var(--muted);font-size:11px}.consent-warning{display:block;margin:0 20px 20px;color:var(--red);font-weight:700}.consent-warning[hidden]{display:none}@media(max-width:720px){.consent-row{grid-template-columns:1fr}.consent-actions{justify-content:flex-start}}@media print{.invoice-header{print-color-adjust:exact;-webkit-print-color-adjust:exact}.invoice-brand{width:100px;height:56px}.order-summary-table{font-size:11px}.consent-panel{break-inside:avoid}}';
   document.head.append(style);
 
   const serviceInputs = [...document.querySelectorAll('#services-list input')];
@@ -83,10 +83,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const newInstallationOrderButton = document.querySelector('#new-installation-order');
   const clearOrderButton = document.querySelector('#clear-order');
   document.querySelector('.order-actions').append(newInstallationOrderButton);
+  
   const lookupBox = document.createElement('div');
   lookupBox.className = 'order-lookup';
-  lookupBox.innerHTML = '<label>Seleccionar sucursal<select id="lookup-branch"><option>Granados</option><option>Valle de los Chillos</option><option>Guayaquil</option></select></label><label>Ordenes recientes de la sucursal<select id="recent-orders"><option value="">Cargando ordenes...</option></select></label><button class="consent-button" type="button" id="load-recent-order">Cargar orden reciente</button><label>O buscar por numero<input id="lookup-order-number" type="text" placeholder="#ORD-2026-0003"></label><button class="consent-button" type="button" id="load-order">Cargar orden</button><output class="technician-message" id="lookup-message" aria-live="polite"></output>';
+  lookupBox.innerHTML = '<label>Seleccionar sucursal<select id="lookup-branch"><option>Granados</option><option>Valle de los Chillos</option><option>Guayaquil</option></select></label><label>Órdenes recientes de la sucursal<select id="recent-orders"><option value="">Cargando órdenes...</option></select></label><button class="consent-button" type="button" id="load-recent-order">Cargar orden reciente</button><label>O buscar por número<input id="lookup-order-number" type="text" placeholder="#ORD-2026-0003"></label><button class="consent-button" type="button" id="load-order">Cargar orden</button><output class="technician-message" id="lookup-message" aria-live="polite"></output>';
   technicianPanel.prepend(lookupBox);
+  
   const lookupBranch = lookupBox.querySelector('#lookup-branch');
   const recentOrders = lookupBox.querySelector('#recent-orders');
   const loadRecentOrderButton = lookupBox.querySelector('#load-recent-order');
@@ -94,15 +96,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const loadOrderButton = lookupBox.querySelector('#load-order');
   const lookupMessage = lookupBox.querySelector('#lookup-message');
   lookupBranch.value = branchSelect.value;
+  
   async function loadRecentOrders() {
-    recentOrders.innerHTML = '<option value="">Cargando ordenes...</option>';
+    recentOrders.innerHTML = '<option value="">Cargando órdenes...</option>';
     try {
       const response = await fetch(`http://localhost:8001/api/ordenes-recientes/${encodeURIComponent(lookupBranch.value)}`);
       const result = await response.json();
-      if (!response.ok) throw new Error(result.detail || 'No se pudieron consultar las ordenes.');
+      if (!response.ok) throw new Error(result.detail || 'No se pudieron consultar las órdenes.');
       recentOrders.innerHTML = result.ordenes.length
-        ? result.ordenes.map((order) => `<option value="${order.numero_orden}">${order.cliente} - ${order.numero_orden} (${order.fecha})${order.instalacion_guardada ? ' - Instalacion completada' : ''}</option>`).join('')
-        : '<option value="">No hay ordenes en esta sucursal</option>';
+        ? result.ordenes.map((order) => `<option value="${order.numero_orden}">${order.cliente} - ${order.numero_orden} (${order.fecha})${order.instalacion_guardada ? ' - Instalación completada' : ''}</option>`).join('')
+        : '<option value="">No hay órdenes en esta sucursal</option>';
     } catch (error) {
       recentOrders.innerHTML = '<option value="">No se pudieron cargar</option>';
       lookupMessage.textContent = `Error: ${error.message}`;
@@ -138,32 +141,30 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'client', role: 'Cliente', required: true },
     { id: 'advisor', role: 'Asesor de ventas', required: true, email: 'sistemas@llantas247.com' },
     { id: 'tire-installer', role: 'Instalador de enllantaje', service: 'Enllantaje - Balanceo' },
-    { id: 'alignment-installer', role: 'Instalador de alineacion', service: 'Alineación' }
+    { id: 'alignment-installer', role: 'Instalador de alineación', service: 'Alineación' }
   ];
+  
   const savedConsent = JSON.parse(localStorage.getItem(`consent-${orderNumber}`) || '{}');
+  
   consentRows.forEach(({ id, role, email }) => {
     const row = document.createElement('div');
     row.className = 'consent-row';
     row.dataset.consentId = id;
-    row.innerHTML = `<strong class="consent-role">${role}</strong><input type="email" class="consent-email" placeholder="Correo electronico" aria-label="Correo de ${role}"><span class="consent-status">Pendiente</span><div class="consent-actions"><button type="button" class="consent-button notify-button">Notificar</button><button type="button" class="consent-button approve-button">Aprobar</button><button type="button" class="consent-button reject-button">Rechazar</button></div><p class="consent-note">Notificacion por correo disponible.</p>`;
+    
+    // AQUÍ ELIMINAMOS LOS BOTONES DE APROBAR/RECHAZAR, DEJAMOS SOLO EL DE NOTIFICAR
+    row.innerHTML = `<strong class="consent-role">${role}</strong><input type="email" class="consent-email" placeholder="Correo electrónico" aria-label="Correo de ${role}"><span class="consent-status">Pendiente</span><div class="consent-actions"><button type="button" class="consent-button notify-button">Notificar</button></div><p class="consent-note">Notificación por correo disponible.</p>`;
+    
     row.querySelector('.consent-email').value = email || '';
     const savedStatus = savedConsent[id]?.status;
     if (savedStatus) {
-      row.dataset.status = savedStatus;
-      row.querySelector('.consent-status').textContent = savedStatus === 'approved' ? 'Aprobado' : 'Rechazado';
-      row.querySelector('.consent-status').classList.add(savedStatus);
+      setConsentStatus(row, savedStatus);
     }
+    
+    // Solo existe el evento del botón Notificar
     row.querySelector('.notify-button').addEventListener('click', () => {
       notifyConsent(row, role);
     });
-    row.querySelector('.approve-button').addEventListener('click', () => {
-      setConsentStatus(row, 'approved');
-      updateConsentState();
-    });
-    row.querySelector('.reject-button').addEventListener('click', () => {
-      setConsentStatus(row, 'rejected');
-      updateConsentState();
-    });
+    
     consentList.append(row);
   });
 
@@ -173,23 +174,53 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('#customer-email').addEventListener('input', (event) => {
     document.querySelector('.consent-row[data-consent-id="client"] .consent-email').value = event.target.value;
   });
+  
   async function notifyConsent(row, role) {
     const email = row.querySelector('.consent-email').value.trim();
     if (!email) { lookupMessage.textContent = `Escribe el correo de ${role}.`; return; }
     try {
       const response = await fetch(`http://localhost:8001/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/${row.dataset.consentId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correo: email }) });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.detail || 'No se pudo enviar la notificacion.');
+      if (!response.ok) throw new Error(result.detail || 'No se pudo enviar la notificación.');
+      
+      setConsentStatus(row, 'notified');
+      updateConsentState();
       lookupMessage.textContent = `✓ ${result.mensaje}`;
     } catch (error) { lookupMessage.textContent = `Error: ${error.message}`; }
   }
 
   function setConsentStatus(row, status) {
     const statusLabel = row.querySelector('.consent-status');
+    const noteText = row.querySelector('.consent-note');
     row.dataset.status = status;
-    statusLabel.textContent = status === 'approved' ? 'Aprobado' : 'Rechazado';
-    statusLabel.classList.remove('approved', 'rejected');
-    statusLabel.classList.add(status);
+    
+    statusLabel.className = `consent-status ${status}`;
+    
+    if (status === 'pending') {
+      statusLabel.textContent = 'Pendiente';
+      noteText.textContent = 'Notificación por correo disponible.';
+      row.style.background = '';
+      row.style.borderColor = '';
+    } else if (status === 'notified') {
+      statusLabel.textContent = 'Notificado';
+      noteText.textContent = 'Correo enviado. Esperando respuesta...';
+      row.style.background = '#eff6ff';
+      row.style.borderColor = '#3b82f6';
+    } else if (status === 'approved') {
+      statusLabel.textContent = 'Aprobado';
+      noteText.textContent = '✓ Aprobado con éxito.';
+      row.style.background = '#d9f8ed';
+      row.style.borderColor = '#00bd7b';
+      // Ocultamos el botón notificar cuando ya está aprobado
+      const btn = row.querySelector('.notify-button');
+      if(btn) btn.style.display = 'none';
+    } else if (status === 'rejected') {
+      statusLabel.textContent = 'Rechazado';
+      noteText.textContent = '✗ Rechazado.';
+      row.style.background = '#fff3f3';
+      row.style.borderColor = '#ed0010';
+    }
+
     const consentState = JSON.parse(localStorage.getItem(`consent-${orderNumber}`) || '{}');
     consentState[row.dataset.consentId] = { status, at: new Date().toISOString() };
     localStorage.setItem(`consent-${orderNumber}`, JSON.stringify(consentState));
@@ -200,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
     consentRows.forEach(({ id }) => {
       const row = consentList.querySelector(`[data-consent-id="${id}"]`);
       row.hidden = false;
-      if (!['approved', 'rejected'].includes(row.dataset.status)) {
+      if (!['approved', 'rejected', 'notified'].includes(row.dataset.status)) {
         row.dataset.status = 'pending';
         row.querySelector('.consent-status').textContent = 'Pendiente';
       }
@@ -212,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
     consentWarning.textContent = `Faltan ${visibleRows.length - approved} consentimiento(s) para completar la orden.`;
   }
 
-  // --- POLLING DE CONSENTIMIENTOS EN TIEMPO REAL ---
+  // --- POLLING DE CONSENTIMIENTOS EN TIEMPO REAL (AHORA CON ANTI-CACHÉ) ---
   let consentPollingInterval = null;
 
   function stopConsentPolling() {
@@ -238,19 +269,14 @@ document.addEventListener('DOMContentLoaded', () => {
       let datosGuardados = consentimientosBD[id] || null;
       if (datosGuardados) {
         const estadoBD = datosGuardados.estado;
-        const nuevoStatus = estadoBD === 'aprobado' ? 'approved' : (estadoBD === 'rechazado' ? 'rejected' : 'pending');
+        let nuevoStatus = 'pending';
+        if (estadoBD === 'aprobado') nuevoStatus = 'approved';
+        else if (estadoBD === 'rechazado') nuevoStatus = 'rejected';
+        else if (estadoBD === 'notificado') nuevoStatus = 'notified';
+
         if (row.dataset.status !== nuevoStatus && nuevoStatus !== 'pending') {
           changed = true;
-          const statusLabel = row.querySelector('.consent-status');
-          row.dataset.status = nuevoStatus;
-          statusLabel.textContent = nuevoStatus === 'approved' ? 'Aprobado' : 'Rechazado';
-          statusLabel.classList.remove('approved', 'rejected', 'pending');
-          statusLabel.classList.add(nuevoStatus);
-          // Flash visual en la fila
-          row.style.transition = 'background .3s, border-color .3s';
-          row.style.background = nuevoStatus === 'approved' ? '#d9f8ed' : '#fff3f3';
-          row.style.borderColor = nuevoStatus === 'approved' ? '#00bd7b' : '#ed0010';
-          setTimeout(() => { row.style.background = ''; row.style.borderColor = ''; }, 2500);
+          setConsentStatus(row, nuevoStatus);
           showConsentToast(role, estadoBD);
         }
       }
@@ -258,18 +284,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (changed) updateConsentState();
   }
 
+  // AQUÍ ESTÁ LA MAGIA PARA QUE REFLEJE AL INSTANTE CUANDO ACEPTAN EN EL CORREO
   function startConsentPolling(numeroOrden) {
     stopConsentPolling();
     consentPollingInterval = setInterval(async () => {
-      // Detener si ya no hay filas pendientes
       const visibles = [...consentList.querySelectorAll('.consent-row:not([hidden])')]; 
-      const hayPendientes = visibles.some((row) => !['approved', 'rejected'].includes(row.dataset.status));
+      const hayPendientes = visibles.some((row) => row.dataset.status === 'pending' || row.dataset.status === 'notified');
       if (!hayPendientes) { stopConsentPolling(); return; }
+      
       try {
-        const res = await fetch(`http://localhost:8001/api/orden/${encodeURIComponent(numeroOrden)}`);
+        // Al sumar ?t=${Date.now()}, engañamos al navegador para que lea de la BD en tiempo real
+        const url = `http://localhost:8001/api/orden/${encodeURIComponent(numeroOrden)}?t=${Date.now()}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        
         if (!res.ok) return;
         const data = await res.json();
-        if (data.instalacion?.consentimientos) syncConsentFromDB(data.instalacion.consentimientos);
+        
+        if (data.instalacion?.consentimientos) {
+          syncConsentFromDB(data.instalacion.consentimientos);
+        }
       } catch { /* silencioso */ }
     }, 5000);
   }
@@ -358,6 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (quantity) quantity.value = savedItem?.match(/: (\d+)$/)?.[1] || '';
         });
       }
+      
       // --- LEER CONSENTIMIENTOS DESDE POSTGRESQL ---
       if (order.instalacion && order.instalacion.consentimientos) {
         const consentimientosBD = order.instalacion.consentimientos;
@@ -366,23 +400,27 @@ document.addEventListener('DOMContentLoaded', () => {
           let datosGuardados = null;
           if (id === 'client') datosGuardados = consentimientosBD['client'];
           if (id === 'advisor') datosGuardados = consentimientosBD['advisor'];
+          if (id === 'tire-installer') datosGuardados = consentimientosBD['tire-installer'];
+          if (id === 'alignment-installer') datosGuardados = consentimientosBD['alignment-installer'];
+          
           if (datosGuardados) {
-            const estadoBD = datosGuardados.estado; // 'pendiente', 'aprobado' o 'rechazado'
-            const statusLabel = row.querySelector('.consent-status');
-            row.dataset.status = estadoBD === 'aprobado' ? 'approved' : (estadoBD === 'rechazado' ? 'rejected' : 'pending');
-            statusLabel.textContent = estadoBD === 'aprobado' ? 'Aprobado' : (estadoBD === 'rechazado' ? 'Rechazado' : 'Pendiente');
-            statusLabel.classList.remove('approved', 'rejected', 'pending');
-            if (estadoBD === 'aprobado') statusLabel.classList.add('approved');
-            if (estadoBD === 'rechazado') statusLabel.classList.add('rejected');
+            const estadoBD = datosGuardados.estado;
+            let nuevoStatus = 'pending';
+            if (estadoBD === 'aprobado') nuevoStatus = 'approved';
+            else if (estadoBD === 'rechazado') nuevoStatus = 'rejected';
+            else if (estadoBD === 'notificado') nuevoStatus = 'notified';
+            setConsentStatus(row, nuevoStatus);
           }
         });
         updateConsentState();
       }
       // --- FIN DE LEER CONSENTIMIENTOS ---
+      
       checklistStatus.textContent = `${checklistInputs.filter((input) => input.checked).length} presentes`;
       document.querySelector('#order-summary-panel').hidden = true;
       lookupMessage.textContent = `✓ Orden ${order.numero_orden} cargada.`;
-      // Iniciar polling para detectar aprobaciones en tiempo real
+      
+      // Iniciar polling al cargar una orden para ver cambios en tiempo real
       startConsentPolling(order.numero_orden);
     } catch (error) {
       lookupMessage.textContent = `Error: ${error.message}`;
@@ -533,6 +571,10 @@ document.addEventListener('DOMContentLoaded', () => {
       submitButton.disabled = true;
       submitButton.innerHTML = '<span>✓</span> Orden guardada';
       updateOrderSummary();
+      
+      // Iniciar polling al crear una orden para ver los cambios en tiempo real
+      startConsentPolling(result.numero_orden);
+      
     } catch (error) {
       message.textContent = `Error al guardar: ${error.message}`;
     } finally {
@@ -581,7 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   newInstallationOrderButton.addEventListener('click', () => {
     stopConsentPolling(); // Cancelar polling al limpiar la orden
-    if (!window.confirm('Se limpiaran los datos de la pantalla para crear una nueva orden. La orden ya guardada no se borrara.')) return;
+    if (!window.confirm('Se limpiarán los datos de la pantalla para crear una nueva orden. La orden ya guardada no se borrará.')) return;
     document.querySelector('#order-form').reset();
     technicianPanel.querySelectorAll('input, textarea, select').forEach((field) => {
       if (field.type === 'checkbox') field.checked = false;
@@ -607,10 +649,10 @@ document.addEventListener('DOMContentLoaded', () => {
     orderSaveButton.innerHTML = '<span>▣</span> Guardar orden';
     loadNextOrderNumber();
     consentList.querySelectorAll('.consent-row').forEach((row) => {
-      row.dataset.status = 'pending';
-      row.querySelector('.consent-status').textContent = 'Pendiente';
-      row.querySelector('.consent-status').classList.remove('approved', 'rejected');
+      setConsentStatus(row, 'pending');
       row.querySelector('.consent-email').value = '';
+      const btn = row.querySelector('.notify-button');
+      if(btn) btn.style.display = 'block'; // Volver a mostrar el botón si estaba oculto
     });
     updateConsentState();
     document.querySelector('#order-form').hidden = false;
@@ -620,6 +662,4 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   clearOrderButton.addEventListener('click', () => newInstallationOrderButton.click());
-
-  document.querySelector('#print-order').addEventListener('click', () => window.print());
 });

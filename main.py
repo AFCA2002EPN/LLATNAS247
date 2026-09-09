@@ -251,7 +251,8 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
             datos = fila[1] or {}
             tokens = datos.get("consentimientos", {})
             token = secrets.token_urlsafe(32)
-            tokens[responsable] = {"token": token, "estado": "pendiente", "correo": notificacion.correo}
+            # Cambiado a 'notificado' para reflejar el envío del correo
+            tokens[responsable] = {"token": token, "estado": "notificado", "correo": notificacion.correo}
             datos["consentimientos"] = tokens
             cursor.execute("UPDATE ordenes SET instalacion = %s::jsonb WHERE numero_orden = %s", (json.dumps(datos), numero_orden))
         conexion.commit()
