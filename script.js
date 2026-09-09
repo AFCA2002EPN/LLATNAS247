@@ -9,13 +9,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedBranch = localStorage.getItem('llantas247-branch');
   if (savedBranch && [...branchSelect.options].some((option) => option.value === savedBranch)) branchSelect.value = savedBranch;
   const orderDate = document.querySelector('#order-date');
+  const headerDate = document.querySelector('.heading-meta span strong');
+
+  function updateHeaderDate() {
+    if (!orderDate.value) return;
+    const [year, month, day] = orderDate.value.split('-');
+    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    if (headerDate) {
+      headerDate.textContent = `${day} de ${meses[parseInt(month, 10) - 1]} de ${year}`;
+    }
+  }
+
   if (!orderDate.value) orderDate.value = new Date().toISOString().slice(0, 10);
+  updateHeaderDate(); // Actualiza al abrir la página
+  orderDate.addEventListener('input', updateHeaderDate); // Actualiza si cambias la fecha a mano
+  
   const setOrderNumber = (number) => {
     orderNumber = number;
     statusNumber.textContent = orderNumber;
     summaryNumber.textContent = orderNumber;
     if (invoiceHeader) invoiceHeader.querySelector('.invoice-number').textContent = orderNumber;
   };
+  
   const loadNextOrderNumber = async () => {
     try {
       const response = await fetch(`http://localhost:8001/api/proximo-numero/${orderDate.value.slice(0, 4)}`);
@@ -26,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
       statusNumber.textContent = 'Consecutivo no disponible';
     }
   };
+  
   branchSelect.addEventListener('change', () => {
     localStorage.setItem('llantas247-branch', branchSelect.value);
     document.querySelector('.invoice-kicker').textContent = `Gestión de taller · ${branchSelect.value}`;
@@ -63,7 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
   invoiceAccent.className = 'invoice-accent';
   invoicePanel.prepend(invoiceHeader);
   invoicePanel.prepend(invoiceAccent);
-  loadNextOrderNumber();
 
   const style = document.createElement('style');
   style.textContent = '.salesperson-custom[hidden]{display:none}.dot-code{max-width:160px;text-transform:uppercase;letter-spacing:.16em}.invoice-header{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:24px 20px;background:linear-gradient(120deg,#10182e,#1e2c4d);color:#fff}.invoice-brand{width:112px;height:64px;padding:7px;border-radius:6px;background:#fff;object-fit:contain}.invoice-heading{margin:0;font-size:22px}.invoice-kicker{margin:5px 0 0;color:#9fb0cc;font:10px IBM Plex Mono,monospace;text-transform:uppercase;letter-spacing:.14em}.invoice-number{color:#fff;font:700 15px IBM Plex Mono,monospace;white-space:nowrap}.invoice-accent{height:5px;background:#ed0010}.consent-panel{margin-top:24px}.consent-intro{margin:0 20px 18px;color:var(--muted);line-height:1.5}.consent-list{display:grid;gap:10px;padding:0 20px 20px}.consent-row{display:grid;grid-template-columns:minmax(170px,1fr) minmax(180px,1fr) 112px auto;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:6px}.consent-row[hidden]{display:none}.consent-role{font-weight:700}.consent-row input{width:100%;min-width:0}.consent-status{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}.consent-status.notified{color:#2563eb}.consent-status.approved{color:#00bd7b}.consent-status.rejected{color:#ed0010}.consent-actions{display:flex;gap:6px}.consent-button{border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer}.consent-button:hover{border-color:var(--red);color:var(--red)}.consent-note{grid-column:1/-1;margin:0;color:var(--muted);font-size:11px}.consent-warning{display:block;margin:0 20px 20px;color:var(--red);font-weight:700}.consent-warning[hidden]{display:none}@media(max-width:720px){.consent-row{grid-template-columns:1fr}.consent-actions{justify-content:flex-start}}@media print{.invoice-header{print-color-adjust:exact;-webkit-print-color-adjust:exact}.invoice-brand{width:100px;height:56px}.order-summary-table{font-size:11px}.consent-panel{break-inside:avoid}}';
@@ -151,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
     row.className = 'consent-row';
     row.dataset.consentId = id;
     
-    // AQUÍ ELIMINAMOS LOS BOTONES DE APROBAR/RECHAZAR, DEJAMOS SOLO EL DE NOTIFICAR
     row.innerHTML = `<strong class="consent-role">${role}</strong><input type="email" class="consent-email" placeholder="Correo electrónico" aria-label="Correo de ${role}"><span class="consent-status">Pendiente</span><div class="consent-actions"><button type="button" class="consent-button notify-button">Notificar</button></div><p class="consent-note">Notificación por correo disponible.</p>`;
     
     row.querySelector('.consent-email').value = email || '';
@@ -160,7 +174,6 @@ document.addEventListener('DOMContentLoaded', () => {
       setConsentStatus(row, savedStatus);
     }
     
-    // Solo existe el evento del botón Notificar
     row.querySelector('.notify-button').addEventListener('click', () => {
       notifyConsent(row, role);
     });
@@ -211,7 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
       noteText.textContent = '✓ Aprobado con éxito.';
       row.style.background = '#d9f8ed';
       row.style.borderColor = '#00bd7b';
-      // Ocultamos el botón notificar cuando ya está aprobado
       const btn = row.querySelector('.notify-button');
       if(btn) btn.style.display = 'none';
     } else if (status === 'rejected') {
@@ -243,7 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
     consentWarning.textContent = `Faltan ${visibleRows.length - approved} consentimiento(s) para completar la orden.`;
   }
 
-  // --- POLLING DE CONSENTIMIENTOS EN TIEMPO REAL (AHORA CON ANTI-CACHÉ) ---
   let consentPollingInterval = null;
 
   function stopConsentPolling() {
@@ -284,7 +295,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (changed) updateConsentState();
   }
 
-  // AQUÍ ESTÁ LA MAGIA PARA QUE REFLEJE AL INSTANTE CUANDO ACEPTAN EN EL CORREO
   function startConsentPolling(numeroOrden) {
     stopConsentPolling();
     consentPollingInterval = setInterval(async () => {
@@ -293,7 +303,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!hayPendientes) { stopConsentPolling(); return; }
       
       try {
-        // Al sumar ?t=${Date.now()}, engañamos al navegador para que lea de la BD en tiempo real
         const url = `http://localhost:8001/api/orden/${encodeURIComponent(numeroOrden)}?t=${Date.now()}`;
         const res = await fetch(url, { cache: 'no-store' });
         
@@ -306,7 +315,6 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch { /* silencioso */ }
     }, 5000);
   }
-  // --- FIN POLLING ---
 
   licensePlate.addEventListener('input', () => {
     licensePlate.value = licensePlate.value.toUpperCase();
@@ -340,6 +348,9 @@ document.addEventListener('DOMContentLoaded', () => {
       loadedOrder = true;
       orderSaved = true;
       setOrderNumber(order.numero_orden);
+      
+      sessionStorage.setItem('activeOrderNumber', order.numero_orden);
+
       const existingOrderButton = document.querySelector('#order-form .save-button');
       existingOrderButton.disabled = true;
       existingOrderButton.innerHTML = '<span>✓</span> Orden guardada';
@@ -347,6 +358,8 @@ document.addEventListener('DOMContentLoaded', () => {
       lookupBranch.value = branchSelect.value;
       localStorage.setItem('llantas247-branch', branchSelect.value);
       orderDate.value = order.fecha;
+      updateHeaderDate();
+      
       document.querySelector('#customer-name').value = order.cliente || '';
       document.querySelector('#customer-email').value = order.correo || '';
       document.querySelector('.consent-row[data-consent-id="client"] .consent-email').value = order.correo || '';
@@ -392,7 +405,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
       
-      // --- LEER CONSENTIMIENTOS DESDE POSTGRESQL ---
       if (order.instalacion && order.instalacion.consentimientos) {
         const consentimientosBD = order.instalacion.consentimientos;
         consentRows.forEach(({ id }) => {
@@ -414,13 +426,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         updateConsentState();
       }
-      // --- FIN DE LEER CONSENTIMIENTOS ---
       
       checklistStatus.textContent = `${checklistInputs.filter((input) => input.checked).length} presentes`;
       document.querySelector('#order-summary-panel').hidden = true;
       lookupMessage.textContent = `✓ Orden ${order.numero_orden} cargada.`;
       
-      // Iniciar polling al cargar una orden para ver cambios en tiempo real
       startConsentPolling(order.numero_orden);
     } catch (error) {
       lookupMessage.textContent = `Error: ${error.message}`;
@@ -566,13 +576,13 @@ document.addEventListener('DOMContentLoaded', () => {
         orderSaved = true;
         setOrderNumber(result.numero_orden);
         lookupInput.value = result.numero_orden;
+        sessionStorage.setItem('activeOrderNumber', result.numero_orden);
       }
       message.textContent = `✓ ${result.mensaje || 'Orden guardada correctamente'}`;
       submitButton.disabled = true;
       submitButton.innerHTML = '<span>✓</span> Orden guardada';
       updateOrderSummary();
       
-      // Iniciar polling al crear una orden para ver los cambios en tiempo real
       startConsentPolling(result.numero_orden);
       
     } catch (error) {
@@ -622,14 +632,18 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   newInstallationOrderButton.addEventListener('click', () => {
-    stopConsentPolling(); // Cancelar polling al limpiar la orden
+    stopConsentPolling(); 
     if (!window.confirm('Se limpiarán los datos de la pantalla para crear una nueva orden. La orden ya guardada no se borrará.')) return;
+    
+    sessionStorage.removeItem('activeOrderNumber');
+    
     document.querySelector('#order-form').reset();
     technicianPanel.querySelectorAll('input, textarea, select').forEach((field) => {
       if (field.type === 'checkbox') field.checked = false;
       else if (field.id !== 'license-plate') field.value = '';
     });
     orderDate.value = new Date().toISOString().slice(0, 10);
+    updateHeaderDate();
     document.querySelector('#tire-result').textContent = '-';
     document.querySelector('#old-tire-result').textContent = '-';
     serviceCount.textContent = '0 seleccionados';
@@ -652,7 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setConsentStatus(row, 'pending');
       row.querySelector('.consent-email').value = '';
       const btn = row.querySelector('.notify-button');
-      if(btn) btn.style.display = 'block'; // Volver a mostrar el botón si estaba oculto
+      if(btn) btn.style.display = 'block'; 
     });
     updateConsentState();
     document.querySelector('#order-form').hidden = false;
@@ -661,5 +675,30 @@ document.addEventListener('DOMContentLoaded', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
-  clearOrderButton.addEventListener('click', () => newInstallationOrderButton.click());
+  clearOrderButton.addEventListener('click', () => {
+    if (orderSaved) {
+      alert('La orden no se puede limpiar porque ya fue guardada. Si deseas crear una nueva, haz clic en "Nueva orden de instalación".');
+      return;
+    }
+    
+    if (!window.confirm('¿Estás seguro de limpiar los datos ingresados?')) return;
+    
+    document.querySelector('#order-form').reset();
+    orderDate.value = new Date().toISOString().slice(0, 10);
+    if (typeof updateHeaderDate === 'function') updateHeaderDate();
+    document.querySelector('#tire-result').textContent = '-';
+    serviceCount.textContent = '0 seleccionados';
+    summary.innerHTML = '<span>No hay servicios seleccionados</span>';
+    document.querySelectorAll('.brand-custom, .salesperson-custom').forEach(field => field.hidden = true);
+    document.querySelector('#save-message').textContent = '';
+  });
+
+  const activeOrder = sessionStorage.getItem('activeOrderNumber');
+  if (activeOrder) {
+    lookupInput.value = activeOrder;
+    setTimeout(() => loadOrderButton.click(), 50);
+  } else {
+    loadNextOrderNumber();
+  }
 });
+
