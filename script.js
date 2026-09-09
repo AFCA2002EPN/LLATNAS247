@@ -21,16 +21,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (!orderDate.value) orderDate.value = new Date().toISOString().slice(0, 10);
-  updateHeaderDate(); // Actualiza al abrir la página
-  orderDate.addEventListener('input', updateHeaderDate); // Actualiza si cambias la fecha a mano
-  
+  updateHeaderDate(); 
+  orderDate.addEventListener('input', updateHeaderDate); 
+
   const setOrderNumber = (number) => {
     orderNumber = number;
     statusNumber.textContent = orderNumber;
     summaryNumber.textContent = orderNumber;
     if (invoiceHeader) invoiceHeader.querySelector('.invoice-number').textContent = orderNumber;
   };
-  
+
   const loadNextOrderNumber = async () => {
     try {
       const response = await fetch(`http://localhost:8001/api/proximo-numero/${orderDate.value.slice(0, 4)}`);
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
       statusNumber.textContent = 'Consecutivo no disponible';
     }
   };
-  
+
   branchSelect.addEventListener('change', () => {
     localStorage.setItem('llantas247-branch', branchSelect.value);
     document.querySelector('.invoice-kicker').textContent = `Gestión de taller · ${branchSelect.value}`;
@@ -64,10 +64,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const manufactureLabel = [...document.querySelectorAll('#technician-panel label')]
     .find((label) => label.textContent.includes('Fecha de fabricación'));
-  manufactureLabel.innerHTML = 'Código DOT (semana y año)<input id="manufacture-code" class="dot-code" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="Ej.: 3526" title="Ingrese exactamente 4 números: semana y año">';
-  manufactureLabel.querySelector('input').addEventListener('input', (event) => {
-    event.target.value = event.target.value.replace(/\D/g, '').slice(0, 4);
-  });
+  if (manufactureLabel) {
+    manufactureLabel.innerHTML = 'Código DOT (semana y año)<input id="manufacture-code" class="dot-code" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="Ej.: 3526" title="Ingrese exactamente 4 números: semana y año">';
+    manufactureLabel.querySelector('input').addEventListener('input', (event) => {
+      event.target.value = event.target.value.replace(/\D/g, '').slice(0, 4);
+    });
+  }
 
   const invoicePanel = document.querySelector('#order-summary-panel');
   invoiceHeader = document.createElement('div');
@@ -81,7 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
   invoicePanel.prepend(invoiceAccent);
 
   const style = document.createElement('style');
-  style.textContent = '.salesperson-custom[hidden]{display:none}.dot-code{max-width:160px;text-transform:uppercase;letter-spacing:.16em}.invoice-header{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:24px 20px;background:linear-gradient(120deg,#10182e,#1e2c4d);color:#fff}.invoice-brand{width:112px;height:64px;padding:7px;border-radius:6px;background:#fff;object-fit:contain}.invoice-heading{margin:0;font-size:22px}.invoice-kicker{margin:5px 0 0;color:#9fb0cc;font:10px IBM Plex Mono,monospace;text-transform:uppercase;letter-spacing:.14em}.invoice-number{color:#fff;font:700 15px IBM Plex Mono,monospace;white-space:nowrap}.invoice-accent{height:5px;background:#ed0010}.consent-panel{margin-top:24px}.consent-intro{margin:0 20px 18px;color:var(--muted);line-height:1.5}.consent-list{display:grid;gap:10px;padding:0 20px 20px}.consent-row{display:grid;grid-template-columns:minmax(170px,1fr) minmax(180px,1fr) 112px auto;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:6px}.consent-row[hidden]{display:none}.consent-role{font-weight:700}.consent-row input{width:100%;min-width:0}.consent-status{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}.consent-status.notified{color:#2563eb}.consent-status.approved{color:#00bd7b}.consent-status.rejected{color:#ed0010}.consent-actions{display:flex;gap:6px}.consent-button{border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer}.consent-button:hover{border-color:var(--red);color:var(--red)}.consent-note{grid-column:1/-1;margin:0;color:var(--muted);font-size:11px}.consent-warning{display:block;margin:0 20px 20px;color:var(--red);font-weight:700}.consent-warning[hidden]{display:none}@media(max-width:720px){.consent-row{grid-template-columns:1fr}.consent-actions{justify-content:flex-start}}@media print{.invoice-header{print-color-adjust:exact;-webkit-print-color-adjust:exact}.invoice-brand{width:100px;height:56px}.order-summary-table{font-size:11px}.consent-panel{break-inside:avoid}}';
+  style.textContent = '.salesperson-custom[hidden]{display:none}.dot-code{max-width:200px;text-transform:uppercase;letter-spacing:.16em}.invoice-header{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:24px 20px;background:linear-gradient(120deg,#10182e,#1e2c4d);color:#fff}.invoice-brand{width:200px;height:85px;padding:7px;border-radius:6px;background:#fff;object-fit:contain}.invoice-heading{margin:0;font-size:22px}.invoice-kicker{margin:5px 0 0;color:#9fb0cc;font:10px IBM Plex Mono,monospace;text-transform:uppercase;letter-spacing:.14em}.invoice-number{color:#fff;font:700 15px IBM Plex Mono,monospace;white-space:nowrap}.invoice-accent{height:5px;background:#ed0010}.consent-panel{margin-top:24px}.consent-intro{margin:0 20px 18px;color:var(--muted);line-height:1.5}.consent-list{display:grid;gap:10px;padding:0 20px 20px}.consent-row{display:grid;grid-template-columns:minmax(170px,1fr) minmax(180px,1fr) 112px auto;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:6px}.consent-row[hidden]{display:none}.consent-role{font-weight:700}.consent-row input{width:100%;min-width:0}.consent-status{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}.consent-status.notified{color:#2563eb}.consent-status.approved{color:#00bd7b}.consent-status.rejected{color:#ed0010}.consent-actions{display:flex;gap:6px}.consent-button{border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer}.consent-button:hover{border-color:var(--red);color:var(--red)}.consent-note{grid-column:1/-1;margin:0;color:var(--muted);font-size:11px}.consent-warning{display:block;margin:0 20px 20px;color:var(--red);font-weight:700}.consent-warning[hidden]{display:none}';
+  
+  // Estilos responsivos e indelebles para el mapa de daños en pantalla y PDF
+  style.textContent += '.damage-map-wrapper{padding:16px 20px;display:flex;justify-content:center;background:#f8fafc;border-bottom:1px solid var(--line)}.damage-map-container{position:relative;display:inline-block;max-width:100%;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff;cursor:crosshair}.damage-map-container img{display:block;max-width:100%;height:auto;pointer-events:none;width:420px}.damage-pin{position:absolute;width:16px;height:16px;background:#ed0010;border:2px solid #fff;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.35);transition:transform 0.15s;-webkit-print-color-adjust:exact;print-color-adjust:exact;z-index:5}.damage-pin:hover{transform:translate(-50%,-50%) scale(1.3);background:#c9000d;z-index:10}';
   document.head.append(style);
 
   const serviceInputs = [...document.querySelectorAll('#services-list input')];
@@ -111,6 +116,59 @@ document.addEventListener('DOMContentLoaded', () => {
   const loadOrderButton = lookupBox.querySelector('#load-order');
   const lookupMessage = lookupBox.querySelector('#lookup-message');
   lookupBranch.value = branchSelect.value;
+
+  // --- MAPA DE DAÑOS INTERACTIVO (EXCLUSIVO PARA TÉCNICO) ---
+  let damagePins = [];
+  let damageMapContainer = document.querySelector('#damage-map-container');
+
+  if (!damageMapContainer) {
+    const damageSectionWrapper = document.createElement('div');
+    damageSectionWrapper.innerHTML = `<div class="panel-title">Mapa de daños del vehículo</div><p class="checklist-help" style="margin:0 20px 10px;color:var(--muted);font-size:12px">Haga clic en la imagen para marcar golpes o rayones. Haga clic sobre un punto rojo para eliminarlo.</p><div class="damage-map-wrapper"><div id="damage-map-container" class="damage-map-container"><img src="assets/images/mapa de daño.png" alt="Mapa del vehículo"></div></div>`;
+    
+    const checklistStatusEl = document.querySelector('#checklist-status');
+    const targetTitle = checklistStatusEl ? checklistStatusEl.closest('.panel-title') : null;
+    if (targetTitle) {
+      targetTitle.before(damageSectionWrapper);
+    } else {
+      technicianPanel.appendChild(damageSectionWrapper);
+    }
+    damageMapContainer = document.querySelector('#damage-map-container');
+  }
+
+  function renderDamagePins() {
+    if (!damageMapContainer) return;
+    damageMapContainer.querySelectorAll('.damage-pin').forEach(pin => pin.remove());
+    damagePins.forEach((pin, index) => {
+      const pinEl = document.createElement('div');
+      pinEl.className = 'damage-pin';
+      pinEl.style.left = `${pin.x}%`;
+      pinEl.style.top = `${pin.y}%`;
+      pinEl.dataset.index = index;
+      pinEl.title = "Clic para eliminar este daño";
+      damageMapContainer.appendChild(pinEl);
+    });
+  }
+
+  if (damageMapContainer) {
+    damageMapContainer.addEventListener('click', (e) => {
+      if (e.target.classList.contains('damage-pin')) {
+        const idx = parseInt(e.target.dataset.index, 10);
+        if (!isNaN(idx)) {
+          damagePins.splice(idx, 1);
+          renderDamagePins();
+          updateOrderSummary();
+        }
+        return;
+      }
+      const rect = damageMapContainer.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      const x = Math.round(((e.clientX - rect.left) / rect.width) * 1000) / 10;
+      const y = Math.round(((e.clientY - rect.top) / rect.height) * 1000) / 10;
+      damagePins.push({ x, y });
+      renderDamagePins();
+      updateOrderSummary();
+    });
+  }
   
   async function loadRecentOrders() {
     recentOrders.innerHTML = '<option value="">Cargando órdenes...</option>';
@@ -165,19 +223,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const row = document.createElement('div');
     row.className = 'consent-row';
     row.dataset.consentId = id;
-    
     row.innerHTML = `<strong class="consent-role">${role}</strong><input type="email" class="consent-email" placeholder="Correo electrónico" aria-label="Correo de ${role}"><span class="consent-status">Pendiente</span><div class="consent-actions"><button type="button" class="consent-button notify-button">Notificar</button></div><p class="consent-note">Notificación por correo disponible.</p>`;
-    
     row.querySelector('.consent-email').value = email || '';
     const savedStatus = savedConsent[id]?.status;
-    if (savedStatus) {
-      setConsentStatus(row, savedStatus);
-    }
+    if (savedStatus) setConsentStatus(row, savedStatus);
     
     row.querySelector('.notify-button').addEventListener('click', () => {
       notifyConsent(row, role);
     });
-    
     consentList.append(row);
   });
 
@@ -188,25 +241,34 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.consent-row[data-consent-id="client"] .consent-email').value = event.target.value;
   });
   
-  async function notifyConsent(row, role) {
+async function notifyConsent(row, role) {
     const email = row.querySelector('.consent-email').value.trim();
-    if (!email) { lookupMessage.textContent = `Escribe el correo de ${role}.`; return; }
+    if (!email) { 
+      lookupMessage.textContent = `Escribe el correo de ${role}.`; 
+      return; 
+    }
     try {
-      const response = await fetch(`http://localhost:8001/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/${row.dataset.consentId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correo: email }) });
+      const response = await fetch(`http://localhost:8001/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/${row.dataset.consentId}`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ correo: email }) 
+      });
+      
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || 'No se pudo enviar la notificación.');
       
       setConsentStatus(row, 'notified');
       updateConsentState();
-      lookupMessage.textContent = `✓ ${result.mensaje}`;
-    } catch (error) { lookupMessage.textContent = `Error: ${error.message}`; }
+      lookupMessage.textContent = `✓ ${result.mensaje || 'Notificación enviada con éxito'}`;
+    } catch (error) { 
+      lookupMessage.textContent = `Error: ${error.message}`; 
+    }
   }
 
   function setConsentStatus(row, status) {
     const statusLabel = row.querySelector('.consent-status');
     const noteText = row.querySelector('.consent-note');
     row.dataset.status = status;
-    
     statusLabel.className = `consent-status ${status}`;
     
     if (status === 'pending') {
@@ -320,6 +382,18 @@ document.addEventListener('DOMContentLoaded', () => {
     licensePlate.value = licensePlate.value.toUpperCase();
   });
 
+  licensePlate.addEventListener('input', () => {
+    licensePlate.value = licensePlate.value.toUpperCase();
+  });
+
+  // 👇 PEGA ESTO AQUÍ ABAJO 👇
+  const customerPhone = document.querySelector('#customer-phone');
+  if (customerPhone) {
+    customerPhone.addEventListener('input', (event) => {
+      event.target.value = event.target.value.replace(/\D/g, '').slice(0, 10);
+    });
+  }
+
   toggleAlarm.addEventListener('click', () => {
     const visible = alarmCode.type === 'text';
     alarmCode.type = visible ? 'password' : 'text';
@@ -328,11 +402,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.querySelectorAll('.brand-select').forEach((select) => {
     select.addEventListener('change', () => {
-      const customBrand = select.closest('section, .technical-details').querySelector('.brand-custom');
-      customBrand.hidden = select.value !== 'Otra marca';
-      if (!customBrand.hidden) customBrand.querySelector('input').focus();
+      const customBrand = select.closest('section, .technical-details')?.querySelector('.brand-custom');
+      if (customBrand) {
+        customBrand.hidden = select.value !== 'Otra marca';
+        if (!customBrand.hidden) customBrand.querySelector('input')?.focus();
+      }
     });
   });
+
+  function getPresentItems() {
+    return checklistInputs.filter((input) => input.checked).map((input) => {
+      const quantity = input.closest('.quantity-check')?.querySelector('.item-quantity');
+      return quantity?.value ? `${input.value}: ${quantity.value}` : input.value;
+    });
+  }
+
+  function displayValue(value) {
+    return value && String(value).trim() ? String(value).trim() : 'No registrado';
+  }
+
+  function updateSummary() {
+    const selected = serviceInputs.filter((input) => input.checked).map((input) => input.value);
+    if (otherService && otherService.value.trim()) selected.push(otherService.value.trim());
+    if (serviceCount) serviceCount.textContent = `${selected.length} seleccionado${selected.length === 1 ? '' : 's'}`;
+    if (summary) summary.innerHTML = selected.length ? selected.map((name) => `<div class="summary-row"><span>${name}</span><small>-</small></div>`).join('') : '<span>No hay servicios seleccionados</span>';
+  }
+
+  // --- FUNCIÓN DE RESUMEN Y MAPA PARA EL PDF ---
+  function updateOrderSummary() {
+    const newBrand = document.querySelector('#new-brand')?.value || '';
+    const oldBrand = (document.querySelector('#technician-panel .brand-select') || document.querySelector('.technical-details .brand-select'))?.value || '';
+    const services = serviceInputs.filter((input) => input.checked).map((input) => input.value);
+    if (otherService && otherService.value.trim()) services.push(otherService.value.trim());
+    
+    // Miniatura del mapa de daños con pines rojos para el resumen y el PDF
+    const pinsSummaryHtml = damagePins.map(pin => `<div style="position:absolute; width:10px; height:10px; background:#ed0010; border:2px solid #fff; border-radius:50%; left:${pin.x}%; top:${pin.y}%; transform:translate(-50%,-50%); -webkit-print-color-adjust:exact; print-color-adjust:exact;"></div>`).join('');
+    const mapPreviewHtml = `<div style="position:relative; display:inline-block; border:1px solid #ccc; border-radius:4px; overflow:hidden; max-width:240px; background:#fff;"><img src="assets/images/mapa de daño.png" alt="Mapa de daños" style="display:block; width:100%; height:auto;" />${pinsSummaryHtml}</div>`;
+
+    const presentItems = getPresentItems();
+    const rows = [
+      ['Cliente', document.querySelector('#customer-name')?.value || ''],
+      ['Sucursal', branchSelect?.value || ''],
+      ['Correo electrónico', document.querySelector('#customer-email')?.value || ''],
+      ['Teléfono', document.querySelector('#customer-phone')?.value || ''],
+      ['Fecha', document.querySelector('#order-date')?.value || ''],
+      ['Asesor de ventas', salespersonSelect?.value === 'Otro asesor' ? customSalespersonName?.value : (salespersonSelect?.value || '')],
+      ['Cantidad de llantas', document.querySelector('#tire-quantity')?.value || ''],
+      ['Llanta nueva', `${newBrand || 'No registrada'} - ${document.querySelector('#tire-result')?.textContent || '-'}`],
+      ['Servicios contratados', services.length ? services.join(', ') : 'Ninguno'],
+      ['Observaciones del vendedor', document.querySelector('.notes-panel textarea')?.value || ''],
+      ['Placa', document.querySelector('#license-plate')?.value || ''],
+      ['Kilometraje', document.querySelector('#technician-panel input[type="number"]')?.value || ''],
+      ['Llanta vieja', `${oldBrand || 'No registrada'} - ${document.querySelector('#old-tire-result')?.textContent || '-'}`],
+      ['Código DOT', document.querySelector('#manufacture-code')?.value || ''],
+      ['Elementos presentes al recibir', presentItems.length ? presentItems.join(', ') : 'Ninguno marcado'],
+      ['Mapa de daños del vehículo', damagePins.length ? mapPreviewHtml : 'Sin daños reportados'],
+      ['Observaciones de ingreso', document.querySelector('.technical-notes')?.value || '']
+    ];
+
+    const summaryBody = document.querySelector('#order-summary-body');
+    if (summaryBody) {
+      summaryBody.innerHTML = rows.map(([label, value]) => `<tr><th>${label}</th><td>${displayValue(value)}</td></tr>`).join('');
+    }
+    const summaryPanel = document.querySelector('#order-summary-panel');
+    if (summaryPanel) summaryPanel.hidden = false;
+  }
 
   loadOrderButton.addEventListener('click', async () => {
     const requestedNumber = lookupInput.value.trim().toUpperCase();
@@ -352,8 +486,10 @@ document.addEventListener('DOMContentLoaded', () => {
       sessionStorage.setItem('activeOrderNumber', order.numero_orden);
 
       const existingOrderButton = document.querySelector('#order-form .save-button');
-      existingOrderButton.disabled = true;
-      existingOrderButton.innerHTML = '<span>✓</span> Orden guardada';
+      if (existingOrderButton) {
+        existingOrderButton.disabled = true;
+        existingOrderButton.innerHTML = '<span>✓</span> Orden guardada';
+      }
       branchSelect.value = order.sucursal || branchSelect.value;
       lookupBranch.value = branchSelect.value;
       localStorage.setItem('llantas247-branch', branchSelect.value);
@@ -366,6 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelector('#customer-phone').value = order.telefono || '';
       if ([...salespersonSelect.options].some((option) => option.value === order.asesor)) salespersonSelect.value = order.asesor || '';
       else salespersonSelect.value = '';
+
       if (order.instalacion) {
         const installation = order.instalacion;
         document.querySelector('#new-brand').value = installation.marca_llanta_nueva || '';
@@ -376,16 +513,18 @@ document.addEventListener('DOMContentLoaded', () => {
           document.querySelector('#tire-rim').value = newMeasure[3];
           document.querySelector('#tire-result').textContent = installation.medida_llanta_nueva;
           ['old-tire-width', 'old-tire-height', 'old-tire-rim'].forEach((id, index) => {
-            document.querySelector(`#${id}`).value = newMeasure[index + 1];
+            const el = document.querySelector(`#${id}`);
+            if (el) el.value = newMeasure[index + 1];
           });
-          document.querySelector('#old-tire-rim').dispatchEvent(new Event('input', { bubbles: true }));
+          document.querySelector('#old-tire-rim')?.dispatchEvent(new Event('input', { bubbles: true }));
         }
         document.querySelector('#tire-quantity').value = installation.cantidad_llantas ?? '';
         serviceInputs.forEach((input) => { input.checked = (installation.servicios || []).includes(input.value); });
         document.querySelector('.notes-panel textarea').value = installation.observaciones_vendedor || '';
-        updateSummary();
+        
         licensePlate.value = installation.placa || '';
-        document.querySelector('#technician-panel input[type="number"]').value = installation.kilometraje ?? '';
+        const kmEl = document.querySelector('#technician-panel input[type="number"]');
+        if (kmEl) kmEl.value = installation.kilometraje ?? '';
         alarmCode.value = installation.codigo_alarma || '';
         const oldMeasureText = installation.medida_llanta_vieja || installation.medida_llanta_nueva || '';
         document.querySelector('#old-tire-result').textContent = oldMeasureText || '-';
@@ -395,26 +534,27 @@ document.addEventListener('DOMContentLoaded', () => {
           document.querySelector('#old-tire-height').value = measure[2];
           document.querySelector('#old-tire-rim').value = measure[3];
         }
-        document.querySelector('#manufacture-code').value = installation.codigo_dot || '';
-        document.querySelector('.technical-notes').value = installation.observaciones_ingreso || '';
+        const dotEl = document.querySelector('#manufacture-code');
+        if (dotEl) dotEl.value = installation.codigo_dot || '';
+        const techNotes = document.querySelector('.technical-notes');
+        if (techNotes) techNotes.value = installation.observaciones_ingreso || '';
         checklistInputs.forEach((input) => {
           const savedItem = (installation.elementos_presentes || []).find((item) => item === input.value || item.startsWith(`${input.value}: `));
           input.checked = Boolean(savedItem);
           const quantity = input.closest('.quantity-check')?.querySelector('.item-quantity');
           if (quantity) quantity.value = savedItem?.match(/: (\d+)$/)?.[1] || '';
         });
+        
+        // Carga de puntos de daño guardados en la BD
+        damagePins = installation.mapa_danos || [];
+        renderDamagePins();
       }
       
       if (order.instalacion && order.instalacion.consentimientos) {
         const consentimientosBD = order.instalacion.consentimientos;
         consentRows.forEach(({ id }) => {
           const row = consentList.querySelector(`[data-consent-id="${id}"]`);
-          let datosGuardados = null;
-          if (id === 'client') datosGuardados = consentimientosBD['client'];
-          if (id === 'advisor') datosGuardados = consentimientosBD['advisor'];
-          if (id === 'tire-installer') datosGuardados = consentimientosBD['tire-installer'];
-          if (id === 'alignment-installer') datosGuardados = consentimientosBD['alignment-installer'];
-          
+          let datosGuardados = consentimientosBD[id] || null;
           if (datosGuardados) {
             const estadoBD = datosGuardados.estado;
             let nuevoStatus = 'pending';
@@ -431,24 +571,18 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelector('#order-summary-panel').hidden = true;
       lookupMessage.textContent = `✓ Orden ${order.numero_orden} cargada.`;
       
+      updateOrderSummary();
       startConsentPolling(order.numero_orden);
     } catch (error) {
       lookupMessage.textContent = `Error: ${error.message}`;
     }
   });
 
-  function updateSummary() {
-    const selected = serviceInputs.filter((input) => input.checked).map((input) => input.value);
-    if (otherService.value.trim()) selected.push(otherService.value.trim());
-    serviceCount.textContent = `${selected.length} seleccionado${selected.length === 1 ? '' : 's'}`;
-    summary.innerHTML = selected.length ? selected.map((name) => `<div class="summary-row"><span>${name}</span><small>-</small></div>`).join('') : '<span>No hay servicios seleccionados</span>';
-  }
-
   serviceInputs.forEach((input) => input.addEventListener('change', () => {
     updateSummary();
     updateConsentState();
   }));
-  otherService.addEventListener('input', updateSummary);
+  if (otherService) otherService.addEventListener('input', updateSummary);
   updateConsentState();
 
   document.querySelectorAll('.view-button').forEach((button) => {
@@ -464,12 +598,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  function getPresentItems() {
-    return checklistInputs.filter((input) => input.checked).map((input) => {
-      const quantity = input.closest('.quantity-check')?.querySelector('.item-quantity');
-      return quantity?.value ? `${input.value}: ${quantity.value}` : input.value;
-    });
-  }
   function updateChecklistStatus() {
     const completed = getPresentItems().length;
     checklistStatus.textContent = `${completed} presente${completed === 1 ? '' : 's'}`;
@@ -477,68 +605,31 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   checklistInputs.forEach((input) => input.addEventListener('change', updateChecklistStatus));
   quantityInputs.forEach((input) => input.addEventListener('input', () => {
-    const checkbox = input.closest('.quantity-check').querySelector('input[type="checkbox"]');
-    checkbox.checked = Number(input.value) > 0;
+    const checkbox = input.closest('.quantity-check')?.querySelector('input[type="checkbox"]');
+    if (checkbox) checkbox.checked = Number(input.value) > 0;
     updateChecklistStatus();
   }));
 
-  ['tire-width', 'tire-height', 'tire-rim'].forEach((id) => document.querySelector(`#${id}`).addEventListener('input', () => {
-    document.querySelector('#tire-result').textContent = `${document.querySelector('#tire-width').value || 0}/${document.querySelector('#tire-height').value || 0}R${document.querySelector('#tire-rim').value || 0}`;
+  ['tire-width', 'tire-height', 'tire-rim'].forEach((id) => document.querySelector(`#${id}`)?.addEventListener('input', () => {
+    document.querySelector('#tire-result').textContent = `${document.querySelector('#tire-width')?.value || 0}/${document.querySelector('#tire-height')?.value || 0}R${document.querySelector('#tire-rim')?.value || 0}`;
   }));
 
-  ['old-tire-width', 'old-tire-height', 'old-tire-rim'].forEach((id) => document.querySelector(`#${id}`).addEventListener('input', () => {
-    document.querySelector('#old-tire-result').textContent = `${document.querySelector('#old-tire-width').value || 0}/${document.querySelector('#old-tire-height').value || 0}R${document.querySelector('#old-tire-rim').value || 0}`;
+  ['old-tire-width', 'old-tire-height', 'old-tire-rim'].forEach((id) => document.querySelector(`#${id}`)?.addEventListener('input', () => {
+    document.querySelector('#old-tire-result').textContent = `${document.querySelector('#old-tire-width')?.value || 0}/${document.querySelector('#old-tire-height')?.value || 0}R${document.querySelector('#old-tire-rim')?.value || 0}`;
   }));
 
-  const tireDimensionPairs = [
-    ['tire-width', 'old-tire-width'],
-    ['tire-height', 'old-tire-height'],
-    ['tire-rim', 'old-tire-rim']
-  ];
+  const tireDimensionPairs = [['tire-width', 'old-tire-width'], ['tire-height', 'old-tire-height'], ['tire-rim', 'old-tire-rim']];
   const oldTireDimensionsEdited = new Set();
   tireDimensionPairs.forEach(([, oldId]) => {
-    document.querySelector(`#${oldId}`).addEventListener('input', () => oldTireDimensionsEdited.add(oldId));
+    document.querySelector(`#${oldId}`)?.addEventListener('input', () => oldTireDimensionsEdited.add(oldId));
   });
   tireDimensionPairs.forEach(([newId, oldId]) => {
-    document.querySelector(`#${newId}`).addEventListener('input', () => {
+    document.querySelector(`#${newId}`)?.addEventListener('input', () => {
       const oldInput = document.querySelector(`#${oldId}`);
-      if (!oldTireDimensionsEdited.has(oldId)) oldInput.value = document.querySelector(`#${newId}`).value;
-      oldInput.dispatchEvent(new Event('input', { bubbles: true }));
+      if (oldInput && !oldTireDimensionsEdited.has(oldId)) oldInput.value = document.querySelector(`#${newId}`).value;
+      oldInput?.dispatchEvent(new Event('input', { bubbles: true }));
     });
   });
-
-  function displayValue(value) {
-    return value && value.trim() ? value.trim() : 'No registrado';
-  }
-
-  function updateOrderSummary() {
-    const newBrand = document.querySelector('#new-brand').value;
-    const oldBrand = document.querySelector('.technical-details .brand-select').value;
-    const services = serviceInputs.filter((input) => input.checked).map((input) => input.value);
-    if (otherService.value.trim()) services.push(otherService.value.trim());
-    const presentItems = getPresentItems();
-    const rows = [
-      ['Cliente', document.querySelector('#customer-name').value],
-      ['Sucursal', branchSelect.value],
-      ['Correo electrónico', document.querySelector('#customer-email').value],
-      ['Teléfono', document.querySelector('#customer-phone').value],
-      ['Fecha', document.querySelector('#order-date').value],
-      ['Asesor de ventas', salespersonSelect.value === 'Otro asesor' ? customSalespersonName.value : salespersonSelect.value],
-      ['Cantidad de llantas', document.querySelector('#tire-quantity').value],
-      ['Llanta nueva', `${newBrand || 'No registrada'} - ${document.querySelector('#tire-result').textContent}`],
-      ['Servicios contratados', services.length ? services.join(', ') : 'Ninguno'],
-      ['Observaciones del vendedor', document.querySelector('.notes-panel textarea').value],
-      ['Placa', document.querySelector('#license-plate').value],
-      ['Kilometraje', document.querySelector('#technician-panel input[type="number"]').value],
-      ['Código de alarma', document.querySelector('#alarm-code').value],
-      ['Llanta vieja', `${oldBrand || 'No registrada'} - ${document.querySelector('#old-tire-result').textContent}`],
-      ['Código DOT', document.querySelector('#manufacture-code').value],
-      ['Elementos presentes al recibir', presentItems.length ? presentItems.join(', ') : 'Ninguno marcado'],
-      ['Observaciones de ingreso', document.querySelector('.technical-notes').value]
-    ];
-    document.querySelector('#order-summary-body').innerHTML = rows.map(([label, value]) => `<tr><th>${label}</th><td>${displayValue(value)}</td></tr>`).join('');
-    document.querySelector('#order-summary-panel').hidden = false;
-  }
 
   document.querySelector('#order-form').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -582,9 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
       submitButton.disabled = true;
       submitButton.innerHTML = '<span>✓</span> Orden guardada';
       updateOrderSummary();
-      
       startConsentPolling(result.numero_orden);
-      
     } catch (error) {
       message.textContent = `Error al guardar: ${error.message}`;
     } finally {
@@ -600,16 +689,17 @@ document.addEventListener('DOMContentLoaded', () => {
       message.textContent = 'Primero guarda la orden del cliente.';
       return;
     }
-    const oldTireBrand = document.querySelector('#technician-panel .brand-select').value;
+    const oldTireBrand = (document.querySelector('#technician-panel .brand-select') || document.querySelector('.technical-details .brand-select'))?.value || '';
     const installationData = {
       placa: licensePlate.value.trim(),
-      kilometraje: document.querySelector('#technician-panel input[type="number"]').value ? Number(document.querySelector('#technician-panel input[type="number"]').value) : null,
+      kilometraje: document.querySelector('#technician-panel input[type="number"]')?.value ? Number(document.querySelector('#technician-panel input[type="number"]').value) : null,
       codigo_alarma: alarmCode.value,
       marca_llanta_vieja: oldTireBrand,
       medida_llanta_vieja: document.querySelector('#old-tire-result').textContent,
-      codigo_dot: document.querySelector('#manufacture-code').value,
+      codigo_dot: document.querySelector('#manufacture-code')?.value || '',
       elementos_presentes: getPresentItems(),
-      observaciones_ingreso: document.querySelector('.technical-notes').value.trim()
+      observaciones_ingreso: document.querySelector('.technical-notes')?.value.trim() || '',
+      mapa_danos: damagePins // Envío de pines a la base de datos
     };
     saveButton.disabled = true;
     message.textContent = 'Guardando instalación...';
@@ -669,6 +759,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if(btn) btn.style.display = 'block'; 
     });
     updateConsentState();
+    
+    // Limpieza de pines
+    damagePins = [];
+    renderDamagePins();
+
     document.querySelector('#order-form').hidden = false;
     technicianPanel.hidden = true;
     document.querySelector('[data-view="seller"]').click();
@@ -691,6 +786,17 @@ document.addEventListener('DOMContentLoaded', () => {
     summary.innerHTML = '<span>No hay servicios seleccionados</span>';
     document.querySelectorAll('.brand-custom, .salesperson-custom').forEach(field => field.hidden = true);
     document.querySelector('#save-message').textContent = '';
+    
+    damagePins = [];
+    renderDamagePins();
+  });
+
+  // BOTÓN IMPRIMIR Y NOMBRE AUTOMÁTICO DE PDF
+  document.querySelector('#print-order').addEventListener('click', () => {
+    const tituloOriginal = document.title;
+    document.title = `${orderNumber} LLANTAS247`;
+    window.print();
+    document.title = tituloOriginal;
   });
 
   const activeOrder = sessionStorage.getItem('activeOrderNumber');
@@ -701,4 +807,3 @@ document.addEventListener('DOMContentLoaded', () => {
     loadNextOrderNumber();
   }
 });
-
