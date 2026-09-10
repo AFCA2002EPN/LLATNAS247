@@ -86,6 +86,23 @@ document.addEventListener('DOMContentLoaded', () => {
   style.textContent = '.salesperson-custom[hidden]{display:none}.dot-code{max-width:200px;text-transform:uppercase;letter-spacing:.16em}.invoice-header{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:24px 20px;background:linear-gradient(120deg,#10182e,#1e2c4d);color:#fff}.invoice-brand{width:200px;height:85px;padding:7px;border-radius:6px;background:#fff;object-fit:contain}.invoice-heading{margin:0;font-size:22px}.invoice-kicker{margin:5px 0 0;color:#9fb0cc;font:10px IBM Plex Mono,monospace;text-transform:uppercase;letter-spacing:.14em}.invoice-number{color:#fff;font:700 15px IBM Plex Mono,monospace;white-space:nowrap}.invoice-accent{height:5px;background:#ed0010}.consent-panel{margin-top:24px}.consent-intro{margin:0 20px 18px;color:var(--muted);line-height:1.5}.consent-list{display:grid;gap:10px;padding:0 20px 20px}.consent-row{display:grid;grid-template-columns:minmax(170px,1fr) minmax(180px,1fr) 112px auto;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:6px}.consent-row[hidden]{display:none}.consent-role{font-weight:700}.consent-row input{width:100%;min-width:0}.consent-status{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}.consent-status.notified{color:#2563eb}.consent-status.approved{color:#00bd7b}.consent-status.rejected{color:#ed0010}.consent-actions{display:flex;gap:6px}.consent-button{border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer}.consent-button:hover{border-color:var(--red);color:var(--red)}.consent-note{grid-column:1/-1;margin:0;color:var(--muted);font-size:11px}.consent-warning{display:block;margin:0 20px 20px;color:var(--red);font-weight:700}.consent-warning[hidden]{display:none}';
   
   style.textContent += '.damage-map-wrapper{padding:16px 20px;display:flex;justify-content:center;background:#f8fafc;border-bottom:1px solid var(--line)}.damage-map-container{position:relative;display:inline-block;max-width:100%;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff;cursor:crosshair}.damage-map-container img{display:block;max-width:100%;height:auto;pointer-events:none;width:420px}.damage-pin{position:absolute;width:16px;height:16px;background:#ed0010;border:2px solid #fff;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.35);transition:transform 0.15s;-webkit-print-color-adjust:exact;print-color-adjust:exact;z-index:5}.damage-pin:hover{transform:translate(-50%,-50%) scale(1.3);background:#c9000d;z-index:10}';
+  
+  style.textContent += `
+  @media print {
+    @page { margin: 0.5cm; size: auto; }
+    body { font-size: 10px !important; background: #fff !important; }
+    .panel { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
+    .invoice-header { padding: 10px 0 !important; background: transparent !important; color: #000 !important; border-bottom: 2px solid #000; }
+    .invoice-brand { filter: grayscale(100%); height: 40px !important; }
+    .invoice-heading, .invoice-number, .invoice-kicker { color: #000 !important; margin: 0; }
+    .order-summary-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .order-summary-table th, .order-summary-table td { padding: 4px !important; border-bottom: 1px solid #ddd; font-size: 10px !important; }
+    .damage-map-container img { width: 220px !important; }
+    .summary-actions, header, footer { display: none !important; }
+    #order-summary-panel { display: block !important; }
+    main > section:not(#order-summary-panel) { display: none !important; }
+  }`;
+
   document.head.append(style);
 
   const serviceInputs = [...document.querySelectorAll('#services-list input')];
@@ -97,8 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const checklistStatus = document.querySelector('#checklist-status');
   const technicianPanel = document.querySelector('#technician-panel');
   const licensePlate = document.querySelector('#license-plate');
-  const alarmCode = document.querySelector('#alarm-code');
-  const toggleAlarm = document.querySelector('#toggle-alarm');
   const newInstallationOrderButton = document.querySelector('#new-installation-order');
   const clearOrderButton = document.querySelector('#clear-order');
   document.querySelector('.order-actions').append(newInstallationOrderButton);
@@ -224,7 +239,6 @@ document.addEventListener('DOMContentLoaded', () => {
     row.className = 'consent-row';
     row.dataset.consentId = id;
     
-    // Si es la fila de reciclaje, ocultamos el botón de Notificar
     const hideButtonStr = (id === 'client_reciclaje') ? 'style="display:none;"' : '';
     
     row.innerHTML = `<strong class="consent-role">${role}</strong><input type="email" class="consent-email" placeholder="Correo electrónico" aria-label="Correo de ${role}"><span class="consent-status">Pendiente</span><div class="consent-actions"><button type="button" class="consent-button notify-button" ${hideButtonStr}>Notificar</button></div><p class="consent-note">Notificación por correo disponible.</p>`;
@@ -259,7 +273,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return; 
     }
     try {
-      // Magia: Al hacer clic en el único botón visible del cliente, se envían ambos correos
       if (row.dataset.consentId.startsWith('client_')) {
         await fetch(`http://localhost:8001/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/client_datos`, { 
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correo: email }) 
@@ -425,12 +438,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  toggleAlarm.addEventListener('click', () => {
-    const visible = alarmCode.type === 'text';
-    alarmCode.type = visible ? 'password' : 'text';
-    toggleAlarm.textContent = visible ? 'Mostrar' : 'Ocultar';
-  });
-
   document.querySelectorAll('.brand-select').forEach((select) => {
     select.addEventListener('change', () => {
       const customBrand = select.closest('section, .technical-details')?.querySelector('.brand-custom');
@@ -450,6 +457,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function displayValue(value) {
     return value && String(value).trim() ? String(value).trim() : 'No registrado';
+  }
+
+  function getConsentText(id) {
+    const row = document.querySelector(`.consent-row[data-consent-id="${id}"]`);
+    if (!row) return 'No solicitado';
+    const status = row.dataset.status;
+    if (status === 'approved') return '✅ Aprobado';
+    if (status === 'rejected') return '❌ Rechazado';
+    if (status === 'notified') return '⏳ Notificado (Esperando)';
+    return 'Pendiente';
   }
 
   function updateSummary() {
@@ -486,7 +503,12 @@ document.addEventListener('DOMContentLoaded', () => {
       ['Código DOT', document.querySelector('#manufacture-code')?.value || ''],
       ['Elementos presentes al recibir', presentItems.length ? presentItems.join(', ') : 'Ninguno marcado'],
       ['Mapa de daños del vehículo', damagePins.length ? mapPreviewHtml : 'Sin daños reportados'],
-      ['Observaciones de ingreso', document.querySelector('.technical-notes')?.value || '']
+      ['Observaciones de ingreso', document.querySelector('.technical-notes')?.value || ''],
+      ['Firma: Protección de Datos', getConsentText('client_datos')],
+      ['Firma: Reciclaje de Llantas', getConsentText('client_reciclaje')],
+      ['Firma: Asesor', getConsentText('advisor')],
+      ['Firma: Instalador Enllantaje', getConsentText('tire-installer')],
+      ['Firma: Instalador Alineación', getConsentText('alignment-installer')]
     ];
 
     const summaryBody = document.querySelector('#order-summary-body');
@@ -559,7 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
         licensePlate.value = installation.placa || '';
         const kmEl = document.querySelector('#technician-panel input[type="number"]');
         if (kmEl) kmEl.value = installation.kilometraje ?? '';
-        alarmCode.value = installation.codigo_alarma || '';
+        
         const oldMeasureText = installation.medida_llanta_vieja || installation.medida_llanta_nueva || '';
         document.querySelector('#old-tire-result').textContent = oldMeasureText || '-';
         const measure = oldMeasureText.match(/^(\d+)\/(\d+)R(\d+)$/);
@@ -713,7 +735,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const installationData = {
       placa: licensePlate.value.trim(),
       kilometraje: document.querySelector('#technician-panel input[type="number"]')?.value ? Number(document.querySelector('#technician-panel input[type="number"]').value) : null,
-      codigo_alarma: alarmCode.value,
       marca_llanta_vieja: oldTireBrand,
       medida_llanta_vieja: document.querySelector('#old-tire-result').textContent,
       codigo_dot: document.querySelector('#manufacture-code')?.value || '',
@@ -782,7 +803,6 @@ document.addEventListener('DOMContentLoaded', () => {
       row.querySelector('.consent-email').value = '';
       
       const btn = row.querySelector('.notify-button');
-      // Asegurarse de que el botón de reciclaje siga oculto al resetear
       if(btn) {
         if(row.dataset.consentId === 'client_reciclaje') {
           btn.style.display = 'none';
