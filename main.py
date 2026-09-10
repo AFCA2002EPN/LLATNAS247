@@ -8,13 +8,15 @@ from datetime import date
 import psycopg2
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
+    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000", "http://localhost:8001", "http://127.0.0.1:8001"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -35,7 +37,6 @@ class OrdenNueva(BaseModel):
 class InstalacionOrden(BaseModel):
     placa: str = ""
     kilometraje: int | None = None
-    codigo_alarma: str = ""
     marca_llanta_vieja: str = ""
     medida_llanta_vieja: str = ""
     codigo_dot: str = ""
@@ -44,6 +45,10 @@ class InstalacionOrden(BaseModel):
 
 class NotificacionConsentimiento(BaseModel):
     correo: str
+
+class LoginRequest(BaseModel):
+    usuario: str
+    password: str
 
 def conectar():
     return psycopg2.connect(
@@ -55,8 +60,8 @@ def conectar():
     )
 
 def enviar_correo(destinatario, asunto, contenido_texto, contenido_html=None):
-    remitente = "notificaciones@llantas247.com" 
-    app_password = "pdmcozetvfeeacuk" 
+    remitente = "sistemas@llantas247.com" 
+    app_password = "sbrkrfigzaheyltl" 
     
     mensaje = EmailMessage()
     mensaje["From"] = remitente
@@ -64,7 +69,6 @@ def enviar_correo(destinatario, asunto, contenido_texto, contenido_html=None):
     mensaje["Subject"] = asunto
     
     mensaje.set_content(contenido_texto)
-    
     if contenido_html:
         mensaje.add_alternative(contenido_html, subtype='html')
     
@@ -78,9 +82,46 @@ def preparar_tabla(cursor):
     cursor.execute("ALTER TABLE ordenes ADD COLUMN IF NOT EXISTS instalacion JSONB")
     cursor.execute("ALTER TABLE ordenes ADD COLUMN IF NOT EXISTS creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     cursor.execute("ALTER TABLE ordenes ADD COLUMN IF NOT EXISTS sucursal VARCHAR(80) DEFAULT 'Granados'")
+    
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id SERIAL PRIMARY KEY,
+        usuario VARCHAR(50) UNIQUE,
+        password VARCHAR(50),
+        rol VARCHAR(20)
+    )
+    """)
+    
+    cursor.execute("SELECT COUNT(*) FROM usuarios")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("INSERT INTO usuarios (usuario, password, rol) VALUES ('admin', 'admin123', 'admin')")
+        cursor.execute("INSERT INTO usuarios (usuario, password, rol) VALUES ('ventas', 'ventas123', 'asesor')")
+        cursor.execute("INSERT INTO usuarios (usuario, password, rol) VALUES ('tecnico', 'tecnico123', 'tecnico')")
+
     cursor.execute("SELECT COUNT(*) FROM ordenes")
     if cursor.fetchone()[0] == 0:
         cursor.execute("ALTER SEQUENCE ordenes_numero_seq RESTART WITH 1")
+
+@app.post("/api/login")
+def login(credenciales: LoginRequest):
+    conexion = None
+    try:
+        conexion = conectar()
+        with conexion.cursor() as cursor:
+            preparar_tabla(cursor)
+            cursor.execute("SELECT rol FROM usuarios WHERE usuario = %s AND password = %s", (credenciales.usuario, credenciales.password))
+            fila = cursor.fetchone()
+            if not fila:
+                raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+            token = secrets.token_hex(16)
+            return {"mensaje": "Login exitoso", "token": token, "rol": fila[0], "usuario": credenciales.usuario}
+    except HTTPException:
+        raise
+    except psycopg2.Error as error:
+        raise HTTPException(status_code=500, detail="Error de base de datos en el login.") from error
+    finally:
+        if conexion:
+            conexion.close()
 
 @app.get("/api/proximo-numero/{anio}")
 def proximo_numero(anio: int):
@@ -89,9 +130,7 @@ def proximo_numero(anio: int):
         conexion = conectar()
         with conexion.cursor() as cursor:
             preparar_tabla(cursor)
-            cursor.execute(
-                "SELECT CASE WHEN is_called THEN last_value + 1 ELSE last_value END FROM ordenes_numero_seq"
-            )
+            cursor.execute("SELECT CASE WHEN is_called THEN last_value + 1 ELSE last_value END FROM ordenes_numero_seq")
             siguiente = cursor.fetchone()[0]
         conexion.commit()
         return {"numero_orden": f"#ORD-{anio}-{siguiente:04d}"}
@@ -247,19 +286,17 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
             tokens = datos.get("consentimientos", {})
             token = secrets.token_urlsafe(32)
             
-            # Guardamos el token normal para el responsable que acaba de hacer clic
             tokens[responsable] = {"token": token, "estado": "notificado", "correo": notificacion.correo}
             datos["consentimientos"] = tokens
             cursor.execute("UPDATE ordenes SET instalacion = %s::jsonb WHERE numero_orden = %s", (json.dumps(datos), numero_orden))
         conexion.commit()
         
-        public_url = os.getenv("LLANTAS_PUBLIC_URL", "http://localhost:8001")
+        public_url = os.getenv("LLANTAS_PUBLIC_URL", "http://localhost:8000")
         aceptar = f"{public_url}/api/consentimiento/{token}/aprobado"
         rechazar = f"{public_url}/api/consentimiento/{token}/rechazado"
         
         texto_plano = f"Se solicita revisar y responder la orden {numero_orden}.\n\nAceptar: {aceptar}\nRechazar: {rechazar}\n"
         
-        # PLANTILLA 1: SOLO DATOS PERSONALES
         if responsable == "client_datos":
             asunto = f"LOPDP: Protección de Datos - Orden {numero_orden}"
             html_content = f"""
@@ -279,8 +316,6 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
               </div>
             </div>
             """
-            
-        # PLANTILLA 2: SOLO RECICLAJE
         elif responsable == "client_reciclaje":
             asunto = f"Autorización de Reciclaje - Orden {numero_orden}"
             html_content = f"""
@@ -300,8 +335,6 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
               </div>
             </div>
             """
-            
-        # PLANTILLA 3: ASESORES E INSTALADORES
         else:
             asunto = f"Consentimiento requerido - Orden {numero_orden}"
             html_content = f"""
@@ -320,12 +353,7 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
             </div>
             """
 
-        enviar_correo(
-            notificacion.correo,
-            asunto,
-            texto_plano,
-            html_content
-        )
+        enviar_correo(notificacion.correo, asunto, texto_plano, html_content)
         return {"mensaje": f"Notificación enviada a {notificacion.correo}"}
     except HTTPException:
         if conexion:
@@ -357,9 +385,7 @@ def responder_consentimiento(token: str, estado: str):
             responsable_nombre = ""
             for r_key, consentimiento in datos.get("consentimientos", {}).items():
                 if consentimiento.get("token") == token:
-                    # Validar si ya fue aprobado
                     if consentimiento.get("estado") in {"aprobado", "rechazado"}:
-                        from fastapi.responses import HTMLResponse
                         return HTMLResponse(content=f"""
                         <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #f8fafc;">
                             <h2 style="color: #2563eb;">Esta autorización ya fue procesada</h2>
@@ -390,7 +416,6 @@ def responder_consentimiento(token: str, estado: str):
             <p>Ya puedes cerrar esta ventana. Tu respuesta ha sido enviada al taller.</p>
         </body></html>
         """
-        from fastapi.responses import HTMLResponse
         return HTMLResponse(content=html_respuesta, status_code=200)
     except HTTPException:
         if conexion:
@@ -399,3 +424,6 @@ def responder_consentimiento(token: str, estado: str):
     finally:
         if conexion:
             conexion.close()
+
+# MONTAR LOS ARCHIVOS ESTÁTICOS AL FINAL DE TODO
+app.mount("/", StaticFiles(directory=".", html=True), name="static")

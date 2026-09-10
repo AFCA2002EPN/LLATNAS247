@@ -1,4 +1,70 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const loginContainer = document.getElementById('login-container');
+  const appContainer = document.getElementById('app-container');
+  const loginForm = document.getElementById('login-form');
+  const loginMessage = document.getElementById('login-message');
+  const logoutButton = document.getElementById('logout-button');
+
+  if (sessionStorage.getItem('llantas_auth_token')) {
+    mostrarApp();
+  }
+
+ loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const user = document.getElementById('login-user').value;
+    const pass = document.getElementById('login-pass').value;
+    loginMessage.textContent = 'Verificando...';
+    
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario: user, password: pass })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || 'Error de conexión');
+      
+      sessionStorage.setItem('llantas_auth_token', data.token);
+      sessionStorage.setItem('llantas_user_role', data.rol);
+      sessionStorage.setItem('llantas_user_name', data.usuario);
+      
+      // Ocultar login y mostrar app de golpe de forma segura
+      document.getElementById('login-container').style.display = 'none';
+      document.getElementById('app-container').hidden = false;
+      
+      const role = data.rol;
+      const targetView = role === 'tecnico' ? 'technician' : 'seller';
+      const viewButton = document.querySelector(`[data-view="${targetView}"]`);
+      if (viewButton) viewButton.click();
+
+    } catch (error) {
+      loginMessage.textContent = error.message;
+    }
+  });
+
+  logoutButton.addEventListener('click', () => {
+    sessionStorage.removeItem('llantas_auth_token');
+    sessionStorage.removeItem('llantas_user_role');
+    sessionStorage.removeItem('llantas_user_name');
+    location.reload();
+  });
+
+function mostrarApp() {
+    loginContainer.hidden = true;
+    appContainer.hidden = false;
+    
+    const role = sessionStorage.getItem('llantas_user_role');
+    const targetView = role === 'tecnico' ? 'technician' : 'seller';
+    
+    setTimeout(() => {
+      const viewButton = document.querySelector(`[data-view="${targetView}"]`);
+      if (viewButton) {
+        viewButton.click();
+      }
+    }, 50);
+  }
+
   let orderNumber = '#ORD-2026-0000';
   let loadedOrder = false;
   let orderSaved = false;
@@ -33,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const loadNextOrderNumber = async () => {
     try {
-      const response = await fetch(`http://localhost:8001/api/proximo-numero/${orderDate.value.slice(0, 4)}`);
+      const response = await fetch(`/api/proximo-numero/${orderDate.value.slice(0, 4)}`);
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || 'No se pudo consultar el consecutivo.');
       setOrderNumber(result.numero_orden);
@@ -186,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadRecentOrders() {
     recentOrders.innerHTML = '<option value="">Cargando órdenes...</option>';
     try {
-      const response = await fetch(`http://localhost:8001/api/ordenes-recientes/${encodeURIComponent(lookupBranch.value)}`);
+      const response = await fetch(`/api/ordenes-recientes/${encodeURIComponent(lookupBranch.value)}`);
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || 'No se pudieron consultar las órdenes.');
       recentOrders.innerHTML = result.ordenes.length
@@ -274,10 +340,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     try {
       if (row.dataset.consentId.startsWith('client_')) {
-        await fetch(`http://localhost:8001/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/client_datos`, { 
+        await fetch(`/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/client_datos`, { 
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correo: email }) 
         });
-        await fetch(`http://localhost:8001/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/client_reciclaje`, { 
+        await fetch(`/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/client_reciclaje`, { 
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correo: email }) 
         });
         
@@ -285,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setConsentStatus(document.querySelector('.consent-row[data-consent-id="client_reciclaje"]'), 'notified');
         lookupMessage.textContent = `✓ 2 correos de notificación enviados al cliente`;
       } else {
-        const response = await fetch(`http://localhost:8001/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/${row.dataset.consentId}`, { 
+        const response = await fetch(`/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/${row.dataset.consentId}`, { 
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correo: email }) 
         });
         const result = await response.json();
@@ -414,7 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!hayPendientes) { stopConsentPolling(); return; }
       
       try {
-        const url = `http://localhost:8001/api/orden/${encodeURIComponent(numeroOrden)}?t=${Date.now()}`;
+        const url = `/api/orden/${encodeURIComponent(numeroOrden)}?t=${Date.now()}`;
         const res = await fetch(url, { cache: 'no-store' });
         
         if (!res.ok) return;
@@ -527,7 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     lookupMessage.textContent = 'Cargando orden...';
     try {
-      const response = await fetch(`http://localhost:8001/api/orden/${encodeURIComponent(requestedNumber)}`);
+      const response = await fetch(`/api/orden/${encodeURIComponent(requestedNumber)}`);
       const order = await response.json();
       if (!response.ok) throw new Error(order.detail || 'No se pudo cargar la orden.');
       loadedOrder = true;
@@ -697,7 +763,7 @@ document.addEventListener('DOMContentLoaded', () => {
     submitButton.disabled = true;
     message.textContent = 'Guardando orden...';
     try {
-      const response = await fetch('http://localhost:8001/api/guardar-orden', {
+      const response = await fetch('/api/guardar-orden', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -745,7 +811,7 @@ document.addEventListener('DOMContentLoaded', () => {
     saveButton.disabled = true;
     message.textContent = 'Guardando instalación...';
     try {
-      const response = await fetch(`http://localhost:8001/api/guardar-instalacion/${encodeURIComponent(orderNumber)}`, {
+      const response = await fetch(`/api/guardar-instalacion/${encodeURIComponent(orderNumber)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(installationData)
