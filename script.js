@@ -798,6 +798,8 @@ function mostrarApp() {
       return;
     }
     const oldTireBrand = (document.querySelector('#technician-panel .brand-select') || document.querySelector('.technical-details .brand-select'))?.value || '';
+    
+    // Asegúrate de que incluya mapa_danos: damagePins
     const installationData = {
       placa: licensePlate.value.trim(),
       kilometraje: document.querySelector('#technician-panel input[type="number"]')?.value ? Number(document.querySelector('#technician-panel input[type="number"]').value) : null,
@@ -806,8 +808,9 @@ function mostrarApp() {
       codigo_dot: document.querySelector('#manufacture-code')?.value || '',
       elementos_presentes: getPresentItems(),
       observaciones_ingreso: document.querySelector('.technical-notes')?.value.trim() || '',
-      mapa_danos: damagePins
+      mapa_danos: damagePins // <--- Esto es lo que envía los puntos rojos a PostgreSQL
     };
+
     saveButton.disabled = true;
     message.textContent = 'Guardando instalación...';
     try {

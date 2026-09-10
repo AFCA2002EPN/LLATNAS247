@@ -42,6 +42,8 @@ class InstalacionOrden(BaseModel):
     codigo_dot: str = ""
     elementos_presentes: list[str] = []
     observaciones_ingreso: str = ""
+    mapa_danos: list = []  
+
 
 class NotificacionConsentimiento(BaseModel):
     correo: str
