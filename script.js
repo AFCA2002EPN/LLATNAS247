@@ -85,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const style = document.createElement('style');
   style.textContent = '.salesperson-custom[hidden]{display:none}.dot-code{max-width:200px;text-transform:uppercase;letter-spacing:.16em}.invoice-header{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:24px 20px;background:linear-gradient(120deg,#10182e,#1e2c4d);color:#fff}.invoice-brand{width:200px;height:85px;padding:7px;border-radius:6px;background:#fff;object-fit:contain}.invoice-heading{margin:0;font-size:22px}.invoice-kicker{margin:5px 0 0;color:#9fb0cc;font:10px IBM Plex Mono,monospace;text-transform:uppercase;letter-spacing:.14em}.invoice-number{color:#fff;font:700 15px IBM Plex Mono,monospace;white-space:nowrap}.invoice-accent{height:5px;background:#ed0010}.consent-panel{margin-top:24px}.consent-intro{margin:0 20px 18px;color:var(--muted);line-height:1.5}.consent-list{display:grid;gap:10px;padding:0 20px 20px}.consent-row{display:grid;grid-template-columns:minmax(170px,1fr) minmax(180px,1fr) 112px auto;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:6px}.consent-row[hidden]{display:none}.consent-role{font-weight:700}.consent-row input{width:100%;min-width:0}.consent-status{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}.consent-status.notified{color:#2563eb}.consent-status.approved{color:#00bd7b}.consent-status.rejected{color:#ed0010}.consent-actions{display:flex;gap:6px}.consent-button{border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer}.consent-button:hover{border-color:var(--red);color:var(--red)}.consent-note{grid-column:1/-1;margin:0;color:var(--muted);font-size:11px}.consent-warning{display:block;margin:0 20px 20px;color:var(--red);font-weight:700}.consent-warning[hidden]{display:none}';
   
-  // Estilos responsivos e indelebles para el mapa de daños en pantalla y PDF
   style.textContent += '.damage-map-wrapper{padding:16px 20px;display:flex;justify-content:center;background:#f8fafc;border-bottom:1px solid var(--line)}.damage-map-container{position:relative;display:inline-block;max-width:100%;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff;cursor:crosshair}.damage-map-container img{display:block;max-width:100%;height:auto;pointer-events:none;width:420px}.damage-pin{position:absolute;width:16px;height:16px;background:#ed0010;border:2px solid #fff;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.35);transition:transform 0.15s;-webkit-print-color-adjust:exact;print-color-adjust:exact;z-index:5}.damage-pin:hover{transform:translate(-50%,-50%) scale(1.3);background:#c9000d;z-index:10}';
   document.head.append(style);
 
@@ -117,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const lookupMessage = lookupBox.querySelector('#lookup-message');
   lookupBranch.value = branchSelect.value;
 
-  // --- MAPA DE DAÑOS INTERACTIVO (EXCLUSIVO PARA TÉCNICO) ---
   let damagePins = [];
   let damageMapContainer = document.querySelector('#damage-map-container');
 
@@ -206,12 +204,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const consentPanel = document.createElement('section');
   consentPanel.className = 'panel consent-panel';
-  consentPanel.innerHTML = '<div class="panel-title with-badge">Consentimientos de la orden <b id="consent-count">0/4 aprobados</b></div><p class="consent-intro">Cada responsable debe aprobar la orden. Cliente, asesor e instaladores deben aprobar la orden antes de iniciar el trabajo.</p><div class="consent-list"></div><output class="consent-warning" hidden></output>';
+  consentPanel.innerHTML = '<div class="panel-title with-badge">Consentimientos de la orden <b id="consent-count">0/5 aprobados</b></div><p class="consent-intro">Cada responsable debe aprobar la orden antes de iniciar el trabajo.</p><div class="consent-list"></div><output class="consent-warning" hidden></output>';
   document.querySelector('main').append(consentPanel);
   const consentList = consentPanel.querySelector('.consent-list');
   const consentWarning = consentPanel.querySelector('.consent-warning');
+  
   const consentRows = [
-    { id: 'client', role: 'Cliente', required: true },
+    { id: 'client_datos', role: 'Cliente (Protección de Datos)', required: true },
+    { id: 'client_reciclaje', role: 'Cliente (Reciclaje de Llantas)', required: true },
     { id: 'advisor', role: 'Asesor de ventas', required: true, email: 'sistemas@llantas247.com' },
     { id: 'tire-installer', role: 'Instalador de enllantaje', service: 'Enllantaje - Balanceo' },
     { id: 'alignment-installer', role: 'Instalador de alineación', service: 'Alineación' }
@@ -223,7 +223,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const row = document.createElement('div');
     row.className = 'consent-row';
     row.dataset.consentId = id;
-    row.innerHTML = `<strong class="consent-role">${role}</strong><input type="email" class="consent-email" placeholder="Correo electrónico" aria-label="Correo de ${role}"><span class="consent-status">Pendiente</span><div class="consent-actions"><button type="button" class="consent-button notify-button">Notificar</button></div><p class="consent-note">Notificación por correo disponible.</p>`;
+    
+    // Si es la fila de reciclaje, ocultamos el botón de Notificar
+    const hideButtonStr = (id === 'client_reciclaje') ? 'style="display:none;"' : '';
+    
+    row.innerHTML = `<strong class="consent-role">${role}</strong><input type="email" class="consent-email" placeholder="Correo electrónico" aria-label="Correo de ${role}"><span class="consent-status">Pendiente</span><div class="consent-actions"><button type="button" class="consent-button notify-button" ${hideButtonStr}>Notificar</button></div><p class="consent-note">Notificación por correo disponible.</p>`;
+    
     row.querySelector('.consent-email').value = email || '';
     const savedStatus = savedConsent[id]?.status;
     if (savedStatus) setConsentStatus(row, savedStatus);
@@ -234,32 +239,50 @@ document.addEventListener('DOMContentLoaded', () => {
     consentList.append(row);
   });
 
-  document.querySelector('.consent-row[data-consent-id="client"] .consent-email').value = document.querySelector('#customer-email').value;
-  if (!document.querySelector('#customer-email').value) document.querySelector('#customer-email').value = 'adriancorrea1234518@gmail.com';
-  document.querySelector('.consent-row[data-consent-id="client"] .consent-email').value = document.querySelector('#customer-email').value;
-  document.querySelector('#customer-email').addEventListener('input', (event) => {
-    document.querySelector('.consent-row[data-consent-id="client"] .consent-email').value = event.target.value;
+  const mainEmailInput = document.querySelector('#customer-email');
+  const emailVal = mainEmailInput.value || 'adriancorrea1234518@gmail.com';
+  const rowDatosEmail = document.querySelector('.consent-row[data-consent-id="client_datos"] .consent-email');
+  const rowReciclajeEmail = document.querySelector('.consent-row[data-consent-id="client_reciclaje"] .consent-email');
+  
+  if(rowDatosEmail) rowDatosEmail.value = emailVal;
+  if(rowReciclajeEmail) rowReciclajeEmail.value = emailVal;
+
+  mainEmailInput.addEventListener('input', (event) => {
+    if(rowDatosEmail) rowDatosEmail.value = event.target.value;
+    if(rowReciclajeEmail) rowReciclajeEmail.value = event.target.value;
   });
   
-async function notifyConsent(row, role) {
+  async function notifyConsent(row, role) {
     const email = row.querySelector('.consent-email').value.trim();
     if (!email) { 
       lookupMessage.textContent = `Escribe el correo de ${role}.`; 
       return; 
     }
     try {
-      const response = await fetch(`http://localhost:8001/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/${row.dataset.consentId}`, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ correo: email }) 
-      });
+      // Magia: Al hacer clic en el único botón visible del cliente, se envían ambos correos
+      if (row.dataset.consentId.startsWith('client_')) {
+        await fetch(`http://localhost:8001/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/client_datos`, { 
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correo: email }) 
+        });
+        await fetch(`http://localhost:8001/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/client_reciclaje`, { 
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correo: email }) 
+        });
+        
+        setConsentStatus(document.querySelector('.consent-row[data-consent-id="client_datos"]'), 'notified');
+        setConsentStatus(document.querySelector('.consent-row[data-consent-id="client_reciclaje"]'), 'notified');
+        lookupMessage.textContent = `✓ 2 correos de notificación enviados al cliente`;
+      } else {
+        const response = await fetch(`http://localhost:8001/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/${row.dataset.consentId}`, { 
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correo: email }) 
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.detail || 'No se pudo enviar la notificación.');
+        
+        setConsentStatus(row, 'notified');
+        lookupMessage.textContent = `✓ ${result.mensaje || 'Notificación enviada con éxito'}`;
+      }
       
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.detail || 'No se pudo enviar la notificación.');
-      
-      setConsentStatus(row, 'notified');
       updateConsentState();
-      lookupMessage.textContent = `✓ ${result.mensaje || 'Notificación enviada con éxito'}`;
     } catch (error) { 
       lookupMessage.textContent = `Error: ${error.message}`; 
     }
@@ -304,10 +327,12 @@ async function notifyConsent(row, role) {
     const selectedServices = serviceInputs.filter((input) => input.checked).map((input) => input.value);
     consentRows.forEach(({ id }) => {
       const row = consentList.querySelector(`[data-consent-id="${id}"]`);
-      row.hidden = false;
-      if (!['approved', 'rejected', 'notified'].includes(row.dataset.status)) {
-        row.dataset.status = 'pending';
-        row.querySelector('.consent-status').textContent = 'Pendiente';
+      if(row) {
+        row.hidden = false;
+        if (!['approved', 'rejected', 'notified'].includes(row.dataset.status)) {
+          row.dataset.status = 'pending';
+          row.querySelector('.consent-status').textContent = 'Pendiente';
+        }
       }
     });
     const visibleRows = [...consentList.querySelectorAll('.consent-row:not([hidden])')];
@@ -339,10 +364,14 @@ async function notifyConsent(row, role) {
     let changed = false;
     consentRows.forEach(({ id, role }) => {
       const row = consentList.querySelector(`[data-consent-id="${id}"]`);
-      let datosGuardados = consentimientosBD[id] || null;
+      if (!row) return;
+      
+      let datosGuardados = consentimientosBD[id]; 
+      
       if (datosGuardados) {
         const estadoBD = datosGuardados.estado;
         let nuevoStatus = 'pending';
+        
         if (estadoBD === 'aprobado') nuevoStatus = 'approved';
         else if (estadoBD === 'rechazado') nuevoStatus = 'rejected';
         else if (estadoBD === 'notificado') nuevoStatus = 'notified';
@@ -351,7 +380,6 @@ async function notifyConsent(row, role) {
           changed = true;
           setConsentStatus(row, nuevoStatus);
           
-          // 👇 LA CORRECCIÓN ESTÁ AQUÍ: Solo muestra la alerta si realmente aprobó o rechazó
           if (estadoBD === 'aprobado' || estadoBD === 'rechazado') {
             showConsentToast(role, estadoBD);
           }
@@ -361,7 +389,7 @@ async function notifyConsent(row, role) {
     
     if (changed) {
       updateConsentState();
-      updateOrderSummary(); // Actualiza el PDF al instante si alguien aprueba
+      updateOrderSummary();
     }
   }
 
@@ -390,11 +418,6 @@ async function notifyConsent(row, role) {
     licensePlate.value = licensePlate.value.toUpperCase();
   });
 
-  licensePlate.addEventListener('input', () => {
-    licensePlate.value = licensePlate.value.toUpperCase();
-  });
-
-  // 👇 PEGA ESTO AQUÍ ABAJO 👇
   const customerPhone = document.querySelector('#customer-phone');
   if (customerPhone) {
     customerPhone.addEventListener('input', (event) => {
@@ -436,14 +459,12 @@ async function notifyConsent(row, role) {
     if (summary) summary.innerHTML = selected.length ? selected.map((name) => `<div class="summary-row"><span>${name}</span><small>-</small></div>`).join('') : '<span>No hay servicios seleccionados</span>';
   }
 
-  // --- FUNCIÓN DE RESUMEN Y MAPA PARA EL PDF ---
   function updateOrderSummary() {
     const newBrand = document.querySelector('#new-brand')?.value || '';
     const oldBrand = (document.querySelector('#technician-panel .brand-select') || document.querySelector('.technical-details .brand-select'))?.value || '';
     const services = serviceInputs.filter((input) => input.checked).map((input) => input.value);
     if (otherService && otherService.value.trim()) services.push(otherService.value.trim());
     
-    // Miniatura del mapa de daños con pines rojos para el resumen y el PDF
     const pinsSummaryHtml = damagePins.map(pin => `<div style="position:absolute; width:10px; height:10px; background:#ed0010; border:2px solid #fff; border-radius:50%; left:${pin.x}%; top:${pin.y}%; transform:translate(-50%,-50%); -webkit-print-color-adjust:exact; print-color-adjust:exact;"></div>`).join('');
     const mapPreviewHtml = `<div style="position:relative; display:inline-block; border:1px solid #ccc; border-radius:4px; overflow:hidden; max-width:240px; background:#fff;"><img src="assets/images/mapa de daño.png" alt="Mapa de daños" style="display:block; width:100%; height:auto;" />${pinsSummaryHtml}</div>`;
 
@@ -506,7 +527,12 @@ async function notifyConsent(row, role) {
       
       document.querySelector('#customer-name').value = order.cliente || '';
       document.querySelector('#customer-email').value = order.correo || '';
-      document.querySelector('.consent-row[data-consent-id="client"] .consent-email').value = order.correo || '';
+      
+      const rDatos = document.querySelector('.consent-row[data-consent-id="client_datos"] .consent-email');
+      const rReciclaje = document.querySelector('.consent-row[data-consent-id="client_reciclaje"] .consent-email');
+      if(rDatos) rDatos.value = order.correo || '';
+      if(rReciclaje) rReciclaje.value = order.correo || '';
+      
       document.querySelector('#customer-phone').value = order.telefono || '';
       if ([...salespersonSelect.options].some((option) => option.value === order.asesor)) salespersonSelect.value = order.asesor || '';
       else salespersonSelect.value = '';
@@ -553,26 +579,12 @@ async function notifyConsent(row, role) {
           if (quantity) quantity.value = savedItem?.match(/: (\d+)$/)?.[1] || '';
         });
         
-        // Carga de puntos de daño guardados en la BD
         damagePins = installation.mapa_danos || [];
         renderDamagePins();
       }
       
       if (order.instalacion && order.instalacion.consentimientos) {
-        const consentimientosBD = order.instalacion.consentimientos;
-        consentRows.forEach(({ id }) => {
-          const row = consentList.querySelector(`[data-consent-id="${id}"]`);
-          let datosGuardados = consentimientosBD[id] || null;
-          if (datosGuardados) {
-            const estadoBD = datosGuardados.estado;
-            let nuevoStatus = 'pending';
-            if (estadoBD === 'aprobado') nuevoStatus = 'approved';
-            else if (estadoBD === 'rechazado') nuevoStatus = 'rejected';
-            else if (estadoBD === 'notificado') nuevoStatus = 'notified';
-            setConsentStatus(row, nuevoStatus);
-          }
-        });
-        updateConsentState();
+        syncConsentFromDB(order.instalacion.consentimientos);
       }
       
       checklistStatus.textContent = `${checklistInputs.filter((input) => input.checked).length} presentes`;
@@ -707,7 +719,7 @@ async function notifyConsent(row, role) {
       codigo_dot: document.querySelector('#manufacture-code')?.value || '',
       elementos_presentes: getPresentItems(),
       observaciones_ingreso: document.querySelector('.technical-notes')?.value.trim() || '',
-      mapa_danos: damagePins // Envío de pines a la base de datos
+      mapa_danos: damagePins
     };
     saveButton.disabled = true;
     message.textContent = 'Guardando instalación...';
@@ -760,15 +772,28 @@ async function notifyConsent(row, role) {
     orderSaveButton.disabled = false;
     orderSaveButton.innerHTML = '<span>▣</span> Guardar orden';
     loadNextOrderNumber();
+    
     consentList.querySelectorAll('.consent-row').forEach((row) => {
-      setConsentStatus(row, 'pending');
+      row.dataset.status = 'pending';
+      row.querySelector('.consent-status').textContent = 'Pendiente';
+      row.querySelector('.consent-note').textContent = 'Notificación por correo disponible.';
+      row.style.background = '';
+      row.style.borderColor = '';
       row.querySelector('.consent-email').value = '';
+      
       const btn = row.querySelector('.notify-button');
-      if(btn) btn.style.display = 'block'; 
+      // Asegurarse de que el botón de reciclaje siga oculto al resetear
+      if(btn) {
+        if(row.dataset.consentId === 'client_reciclaje') {
+          btn.style.display = 'none';
+        } else {
+          btn.style.display = 'block'; 
+        }
+      }
     });
+    
     updateConsentState();
     
-    // Limpieza de pines
     damagePins = [];
     renderDamagePins();
 
@@ -799,7 +824,6 @@ async function notifyConsent(row, role) {
     renderDamagePins();
   });
 
-  // BOTÓN IMPRIMIR Y NOMBRE AUTOMÁTICO DE PDF
   document.querySelector('#print-order').addEventListener('click', () => {
     const tituloOriginal = document.title;
     document.title = `${orderNumber} LLANTAS247`;

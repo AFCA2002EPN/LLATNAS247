@@ -54,20 +54,17 @@ def conectar():
         port=os.getenv("LLANTAS_DB_PORT", "5432"),
     )
 
-# --- FUNCIÓN DE CORREO MEJORADA PARA SOPORTAR HTML ---
 def enviar_correo(destinatario, asunto, contenido_texto, contenido_html=None):
-    remitente = "sistemas@llantas247.com" 
-    app_password = "sbrkrfigzaheyltl" 
+    remitente = "notificaciones@llantas247.com" 
+    app_password = "pdmcozetvfeeacuk" 
     
     mensaje = EmailMessage()
     mensaje["From"] = remitente
     mensaje["To"] = destinatario
     mensaje["Subject"] = asunto
     
-    # Primero se establece la versión de texto plano (por si el correo del cliente no carga imágenes/diseño)
     mensaje.set_content(contenido_texto)
     
-    # Luego se añade la versión en HTML con todo el diseño profesional
     if contenido_html:
         mensaje.add_alternative(contenido_html, subtype='html')
     
@@ -250,6 +247,7 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
             tokens = datos.get("consentimientos", {})
             token = secrets.token_urlsafe(32)
             
+            # Guardamos el token normal para el responsable que acaba de hacer clic
             tokens[responsable] = {"token": token, "estado": "notificado", "correo": notificacion.correo}
             datos["consentimientos"] = tokens
             cursor.execute("UPDATE ordenes SET instalacion = %s::jsonb WHERE numero_orden = %s", (json.dumps(datos), numero_orden))
@@ -259,56 +257,74 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
         aceptar = f"{public_url}/api/consentimiento/{token}/aprobado"
         rechazar = f"{public_url}/api/consentimiento/{token}/rechazado"
         
-        # 1. TEXTO PLANO (Para correos muy básicos)
         texto_plano = f"Se solicita revisar y responder la orden {numero_orden}.\n\nAceptar: {aceptar}\nRechazar: {rechazar}\n"
         
-        # 2. PLANTILLA HTML PROFESIONAL (Diseño tipo Banco con LOPDP)
-        html_content = f"""
-        <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-          <div style="background-color: #10182e; padding: 20px; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 2px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
-          </div>
-          
-          <div style="padding: 30px 20px;">
-            <h2 style="color: #111827; margin-top: 0;">Autorización de Orden de Servicio {numero_orden}</h2>
-            <p style="color: #4b5563; line-height: 1.5; font-size: 15px;">Estimado/a <strong>{cliente_nombre}</strong>, para proceder con la instalación y los servicios en nuestro taller, requerimos su revisión y autorización sobre los siguientes términos legales:</p>
-
-            <div style="background-color: #f8fafc; border-left: 4px solid #ed0010; padding: 15px; margin: 20px 0;">
-              <h4 style="color: #111827; margin: 0 0 8px 0;">1. Autorización de Reciclaje de Llantas</h4>
-              <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.5;">
-                Autorizo a <strong>Llantas 247</strong> a disponer de mis llantas usadas (retiradas del vehículo) para su correcto tratamiento y reciclaje ambiental, renunciando a cualquier reclamo posterior sobre las mismas.
-              </p>
+        # PLANTILLA 1: SOLO DATOS PERSONALES
+        if responsable == "client_datos":
+            asunto = f"LOPDP: Protección de Datos - Orden {numero_orden}"
+            html_content = f"""
+            <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <div style="background-color: #10182e; padding: 20px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 2px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
+              </div>
+              <div style="padding: 30px 20px;">
+                <h2 style="color: #111827; margin-top: 0; text-align: center;">Autorización de Datos Personales</h2>
+                <div style="background-color: #f8fafc; border-left: 4px solid #ed0010; padding: 15px; margin: 20px 0;">
+                  <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.5;">Estimado/a <strong>{cliente_nombre}</strong>, de conformidad con la Ley Orgánica de Protección de Datos Personales (Ecuador), autorizo de manera libre, previa y expresa a Llantas 247 para el tratamiento, almacenamiento y uso de mis datos personales con fines comerciales, de facturación y notificaciones operativas relacionadas con mi vehículo.</p>
+                </div>
+                <div style="text-align: center; margin-top: 30px;">
+                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px; font-size: 15px;">Aceptar y Autorizar</a>
+                  <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 15px; border: 1px solid #d1d5db;">Rechazar</a>
+                </div>
+              </div>
             </div>
-
-            <div style="background-color: #f8fafc; border-left: 4px solid #ed0010; padding: 15px; margin: 20px 0;">
-              <h4 style="color: #111827; margin: 0 0 8px 0;">2. Tratamiento de Datos Personales</h4>
-              <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.5;">
-                De conformidad con la <strong>Ley Orgánica de Protección de Datos Personales (Ecuador)</strong>, autorizo de manera libre, previa y expresa a Llantas 247 para el tratamiento, almacenamiento y uso de mis datos personales con fines comerciales, de facturación y notificaciones operativas relacionadas con mi vehículo.
-              </p>
+            """
+            
+        # PLANTILLA 2: SOLO RECICLAJE
+        elif responsable == "client_reciclaje":
+            asunto = f"Autorización de Reciclaje - Orden {numero_orden}"
+            html_content = f"""
+            <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <div style="background-color: #10182e; padding: 20px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 2px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
+              </div>
+              <div style="padding: 30px 20px;">
+                <h2 style="color: #111827; margin-top: 0; text-align: center;">Autorización de Reciclaje</h2>
+                <div style="background-color: #f8fafc; border-left: 4px solid #ed0010; padding: 15px; margin: 20px 0;">
+                  <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.5;">Estimado/a <strong>{cliente_nombre}</strong>, autorizo a Llantas 247 a disponer de mis llantas usadas (retiradas del vehículo) para su correcto tratamiento y reciclaje ambiental, renunciando a cualquier reclamo posterior sobre las mismas.</p>
+                </div>
+                <div style="text-align: center; margin-top: 30px;">
+                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px; font-size: 15px;">Aceptar y Autorizar</a>
+                  <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 15px; border: 1px solid #d1d5db;">Rechazar</a>
+                </div>
+              </div>
             </div>
-
-            <p style="color: #111827; font-weight: 600; text-align: center; margin: 25px 0; font-size: 14px;">
-              Al hacer clic en "Aceptar y Autorizar", confirmo estar de acuerdo con las condiciones del servicio.
-            </p>
-
-            <div style="text-align: center; margin-top: 30px;">
-              <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px; font-size: 15px; border: 1px solid #00a66c;">Aceptar y Autorizar</a>
-              
-              <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 15px; border: 1px solid #d1d5db;">Rechazar</a>
+            """
+            
+        # PLANTILLA 3: ASESORES E INSTALADORES
+        else:
+            asunto = f"Consentimiento requerido - Orden {numero_orden}"
+            html_content = f"""
+            <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <div style="background-color: #10182e; padding: 20px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 2px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
+              </div>
+              <div style="padding: 30px 20px;">
+                <h2 style="color: #111827; margin-top: 0; text-align: center;">Autorización de Orden {numero_orden}</h2>
+                <p style="color: #4b5563; line-height: 1.5; font-size: 15px; text-align: center;">Se requiere su revisión y aprobación para continuar con esta orden.</p>
+                <div style="text-align: center; margin-top: 30px;">
+                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px; font-size: 15px;">Aprobar Orden</a>
+                  <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 15px; border: 1px solid #d1d5db;">Rechazar</a>
+                </div>
+              </div>
             </div>
-          </div>
-          
-          <div style="background-color: #f9fafb; padding: 15px; text-align: center; border-top: 1px solid #e5e7eb;">
-            <p style="margin: 0; font-size: 11px; color: #9ca3af;">Llantas 247 · Sistema Seguro de Gestión de Taller</p>
-          </div>
-        </div>
-        """
+            """
 
         enviar_correo(
             notificacion.correo,
-            f"Consentimiento requerido - Orden {numero_orden}",
+            asunto,
             texto_plano,
-            html_content # Mandamos el HTML a nuestra función de correo
+            html_content
         )
         return {"mensaje": f"Notificación enviada a {notificacion.correo}"}
     except HTTPException:
@@ -333,21 +349,43 @@ def responder_consentimiento(token: str, estado: str):
         with conexion.cursor() as cursor:
             cursor.execute("SELECT numero_orden, instalacion FROM ordenes WHERE instalacion ? 'consentimientos'")
             fila = next((row for row in cursor.fetchall() if any(item.get("token") == token for item in (row[1] or {}).get("consentimientos", {}).values())), None)
+            
             if not fila:
                 raise HTTPException(status_code=404, detail="Enlace de consentimiento no válido.")
+            
             datos = fila[1] or {}
-            for consentimiento in datos.get("consentimientos", {}).values():
+            responsable_nombre = ""
+            for r_key, consentimiento in datos.get("consentimientos", {}).items():
                 if consentimiento.get("token") == token:
+                    # Validar si ya fue aprobado
+                    if consentimiento.get("estado") in {"aprobado", "rechazado"}:
+                        from fastapi.responses import HTMLResponse
+                        return HTMLResponse(content=f"""
+                        <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #f8fafc;">
+                            <h2 style="color: #2563eb;">Esta autorización ya fue procesada</h2>
+                            <p>El estado registrado es: <strong>{consentimiento.get("estado").capitalize()}</strong>.</p>
+                            <p style="color: #64748b; font-size: 14px; margin-top: 20px;">Ya puedes cerrar esta ventana.</p>
+                        </body></html>
+                        """, status_code=200)
+                    
                     consentimiento["estado"] = estado
+                    responsable_nombre = r_key
                     break
+            
             cursor.execute("UPDATE ordenes SET instalacion = %s::jsonb WHERE numero_orden = %s", (json.dumps(datos), fila[0]))
         conexion.commit()
         
-        # Opcional: Esto es lo que ve el cliente en su navegador al hacer clic en "Aceptar"
+        if responsable_nombre == "client_datos":
+            titulo = f"Protección de Datos {estado.capitalize()}"
+        elif responsable_nombre == "client_reciclaje":
+            titulo = f"Reciclaje de Llantas {estado.capitalize()}"
+        else:
+            titulo = f"Orden {estado.capitalize()} con éxito"
+            
         html_respuesta = f"""
         <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #f8fafc;">
             <h2 style="color: {'#00bd7b' if estado == 'aprobado' else '#ed0010'};">
-                Orden {estado.capitalize()} con éxito
+                {titulo}
             </h2>
             <p>Ya puedes cerrar esta ventana. Tu respuesta ha sido enviada al taller.</p>
         </body></html>
