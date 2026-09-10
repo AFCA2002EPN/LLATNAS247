@@ -32,7 +32,6 @@ class OrdenNueva(BaseModel):
     telefono: str = ""
     asesor: str = ""
 
-
 class InstalacionOrden(BaseModel):
     placa: str = ""
     kilometraje: int | None = None
@@ -43,10 +42,8 @@ class InstalacionOrden(BaseModel):
     elementos_presentes: list[str] = []
     observaciones_ingreso: str = ""
 
-
 class NotificacionConsentimiento(BaseModel):
     correo: str
-
 
 def conectar():
     return psycopg2.connect(
@@ -57,18 +54,22 @@ def conectar():
         port=os.getenv("LLANTAS_DB_PORT", "5432"),
     )
 
-def enviar_correo(destinatario, asunto, contenido):
-    # 1. El remitente oficial del taller
+# --- FUNCIÓN DE CORREO MEJORADA PARA SOPORTAR HTML ---
+def enviar_correo(destinatario, asunto, contenido_texto, contenido_html=None):
     remitente = "sistemas@llantas247.com" 
-    
-    # 2. Tu clave de aplicación unida sin espacios
     app_password = "sbrkrfigzaheyltl" 
     
     mensaje = EmailMessage()
     mensaje["From"] = remitente
     mensaje["To"] = destinatario
     mensaje["Subject"] = asunto
-    mensaje.set_content(contenido)
+    
+    # Primero se establece la versión de texto plano (por si el correo del cliente no carga imágenes/diseño)
+    mensaje.set_content(contenido_texto)
+    
+    # Luego se añade la versión en HTML con todo el diseño profesional
+    if contenido_html:
+        mensaje.add_alternative(contenido_html, subtype='html')
     
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as servidor:
         servidor.login(remitente, app_password)
@@ -83,7 +84,6 @@ def preparar_tabla(cursor):
     cursor.execute("SELECT COUNT(*) FROM ordenes")
     if cursor.fetchone()[0] == 0:
         cursor.execute("ALTER SEQUENCE ordenes_numero_seq RESTART WITH 1")
-
 
 @app.get("/api/proximo-numero/{anio}")
 def proximo_numero(anio: int):
@@ -141,7 +141,6 @@ def guardar_orden(orden: OrdenNueva):
         if conexion:
             conexion.close()
 
-
 @app.get("/api/ordenes-recientes/{sucursal}")
 def ordenes_recientes(sucursal: str):
     conexion = None
@@ -172,7 +171,6 @@ def ordenes_recientes(sucursal: str):
     finally:
         if conexion:
             conexion.close()
-
 
 @app.get("/api/orden/{numero_orden}")
 def obtener_orden(numero_orden: str):
@@ -209,7 +207,6 @@ def obtener_orden(numero_orden: str):
         if conexion:
             conexion.close()
 
-
 @app.put("/api/guardar-instalacion/{numero_orden}")
 def guardar_instalacion(numero_orden: str, instalacion: InstalacionOrden):
     conexion = None
@@ -237,7 +234,6 @@ def guardar_instalacion(numero_orden: str, instalacion: InstalacionOrden):
         if conexion:
             conexion.close()
 
-
 @app.post("/api/notificar-consentimiento/{numero_orden}/{responsable}")
 def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: NotificacionConsentimiento):
     conexion = None
@@ -248,21 +244,71 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
             fila = cursor.fetchone()
             if not fila:
                 raise HTTPException(status_code=404, detail="No se encontró la orden indicada.")
+            
+            cliente_nombre = fila[0]
             datos = fila[1] or {}
             tokens = datos.get("consentimientos", {})
             token = secrets.token_urlsafe(32)
-            # Cambiado a 'notificado' para reflejar el envío del correo
+            
             tokens[responsable] = {"token": token, "estado": "notificado", "correo": notificacion.correo}
             datos["consentimientos"] = tokens
             cursor.execute("UPDATE ordenes SET instalacion = %s::jsonb WHERE numero_orden = %s", (json.dumps(datos), numero_orden))
         conexion.commit()
+        
         public_url = os.getenv("LLANTAS_PUBLIC_URL", "http://localhost:8001")
         aceptar = f"{public_url}/api/consentimiento/{token}/aprobado"
         rechazar = f"{public_url}/api/consentimiento/{token}/rechazado"
+        
+        # 1. TEXTO PLANO (Para correos muy básicos)
+        texto_plano = f"Se solicita revisar y responder la orden {numero_orden}.\n\nAceptar: {aceptar}\nRechazar: {rechazar}\n"
+        
+        # 2. PLANTILLA HTML PROFESIONAL (Diseño tipo Banco con LOPDP)
+        html_content = f"""
+        <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+          <div style="background-color: #10182e; padding: 20px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 2px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
+          </div>
+          
+          <div style="padding: 30px 20px;">
+            <h2 style="color: #111827; margin-top: 0;">Autorización de Orden de Servicio {numero_orden}</h2>
+            <p style="color: #4b5563; line-height: 1.5; font-size: 15px;">Estimado/a <strong>{cliente_nombre}</strong>, para proceder con la instalación y los servicios en nuestro taller, requerimos su revisión y autorización sobre los siguientes términos legales:</p>
+
+            <div style="background-color: #f8fafc; border-left: 4px solid #ed0010; padding: 15px; margin: 20px 0;">
+              <h4 style="color: #111827; margin: 0 0 8px 0;">1. Autorización de Reciclaje de Llantas</h4>
+              <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.5;">
+                Autorizo a <strong>Llantas 247</strong> a disponer de mis llantas usadas (retiradas del vehículo) para su correcto tratamiento y reciclaje ambiental, renunciando a cualquier reclamo posterior sobre las mismas.
+              </p>
+            </div>
+
+            <div style="background-color: #f8fafc; border-left: 4px solid #ed0010; padding: 15px; margin: 20px 0;">
+              <h4 style="color: #111827; margin: 0 0 8px 0;">2. Tratamiento de Datos Personales</h4>
+              <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.5;">
+                De conformidad con la <strong>Ley Orgánica de Protección de Datos Personales (Ecuador)</strong>, autorizo de manera libre, previa y expresa a Llantas 247 para el tratamiento, almacenamiento y uso de mis datos personales con fines comerciales, de facturación y notificaciones operativas relacionadas con mi vehículo.
+              </p>
+            </div>
+
+            <p style="color: #111827; font-weight: 600; text-align: center; margin: 25px 0; font-size: 14px;">
+              Al hacer clic en "Aceptar y Autorizar", confirmo estar de acuerdo con las condiciones del servicio.
+            </p>
+
+            <div style="text-align: center; margin-top: 30px;">
+              <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px; font-size: 15px; border: 1px solid #00a66c;">Aceptar y Autorizar</a>
+              
+              <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 15px; border: 1px solid #d1d5db;">Rechazar</a>
+            </div>
+          </div>
+          
+          <div style="background-color: #f9fafb; padding: 15px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 0; font-size: 11px; color: #9ca3af;">Llantas 247 · Sistema Seguro de Gestión de Taller</p>
+          </div>
+        </div>
+        """
+
         enviar_correo(
             notificacion.correo,
-            f"Consentimiento requerido {numero_orden}",
-            f"Se solicita revisar y responder la orden {numero_orden}.\n\nAceptar: {aceptar}\nRechazar: {rechazar}\n",
+            f"Consentimiento requerido - Orden {numero_orden}",
+            texto_plano,
+            html_content # Mandamos el HTML a nuestra función de correo
         )
         return {"mensaje": f"Notificación enviada a {notificacion.correo}"}
     except HTTPException:
@@ -276,7 +322,6 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
     finally:
         if conexion:
             conexion.close()
-
 
 @app.get("/api/consentimiento/{token}/{estado}")
 def responder_consentimiento(token: str, estado: str):
@@ -297,7 +342,18 @@ def responder_consentimiento(token: str, estado: str):
                     break
             cursor.execute("UPDATE ordenes SET instalacion = %s::jsonb WHERE numero_orden = %s", (json.dumps(datos), fila[0]))
         conexion.commit()
-        return {"mensaje": f"Respuesta registrada: {estado}", "numero_orden": fila[0]}
+        
+        # Opcional: Esto es lo que ve el cliente en su navegador al hacer clic en "Aceptar"
+        html_respuesta = f"""
+        <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #f8fafc;">
+            <h2 style="color: {'#00bd7b' if estado == 'aprobado' else '#ed0010'};">
+                Orden {estado.capitalize()} con éxito
+            </h2>
+            <p>Ya puedes cerrar esta ventana. Tu respuesta ha sido enviada al taller.</p>
+        </body></html>
+        """
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(content=html_respuesta, status_code=200)
     except HTTPException:
         if conexion:
             conexion.rollback()

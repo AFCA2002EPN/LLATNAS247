@@ -350,11 +350,19 @@ async function notifyConsent(row, role) {
         if (row.dataset.status !== nuevoStatus && nuevoStatus !== 'pending') {
           changed = true;
           setConsentStatus(row, nuevoStatus);
-          showConsentToast(role, estadoBD);
+          
+          // 👇 LA CORRECCIÓN ESTÁ AQUÍ: Solo muestra la alerta si realmente aprobó o rechazó
+          if (estadoBD === 'aprobado' || estadoBD === 'rechazado') {
+            showConsentToast(role, estadoBD);
+          }
         }
       }
     });
-    if (changed) updateConsentState();
+    
+    if (changed) {
+      updateConsentState();
+      updateOrderSummary(); // Actualiza el PDF al instante si alguien aprueba
+    }
   }
 
   function startConsentPolling(numeroOrden) {
