@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const newInstallationOrderButton = document.querySelector('#new-installation-order');
   const clearOrderButton = document.querySelector('#clear-order');
-  const saveTechnicianBtn = document.querySelector('#save-technician');
   const printBtn = document.querySelector('#print-order');
 
   let lookupInput, loadOrderButton, lookupBranch, recentOrders, loadRecentOrderButton, lookupMessage;
@@ -117,7 +116,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // REPORTERÍA Y EXCEL
+  // =======================================================
+  // 2. REPORTERÍA Y EXCEL
+  // =======================================================
   document.getElementById('btn-generar-reporte')?.addEventListener('click', async () => {
     const inicio = document.getElementById('rep-inicio').value;
     const fin = document.getElementById('rep-fin').value;
@@ -355,6 +356,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // =======================================================
+  // CARGA DE ORDEN Y HERENCIA EXACTA DE MEDIDAS
+  // =======================================================
   if(loadOrderButton) {
     loadOrderButton.addEventListener('click', async () => {
       const requestedNumber = lookupInput.value.trim().toUpperCase();
@@ -389,7 +393,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('#customer-email').value = order.correo || '';
         document.querySelector('#customer-phone').value = order.telefono || '';
         
-        // HEREDA EL CORREO A LOS CONSENTIMIENTOS DEL CLIENTE
         const rowDatosEmail = document.querySelector('.consent-row[data-consent-id="client_datos"] .consent-email');
         const rowReciclajeEmail = document.querySelector('.consent-row[data-consent-id="client_reciclaje"] .consent-email');
         if(rowDatosEmail) rowDatosEmail.value = order.correo || '';
@@ -408,20 +411,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (order.instalacion) {
           const installation = order.instalacion;
           document.querySelector('#new-brand').value = installation.marca_llanta_nueva || '';
-          const newMeasureText = installation.medida_llanta_nueva || '';
-          const newMeasure = newMeasureText.match(/^(\d+)\/(\d+)R(\d+)$/);
+          
+          // Lógica exacta de herencia que proporcionaste y que funciona:
+          const newMeasure = (installation.medida_llanta_nueva || '').match(/^(\d+)\/(\d+)R(\d+)$/);
           if (newMeasure) {
             document.querySelector('#tire-width').value = newMeasure[1];
             document.querySelector('#tire-height').value = newMeasure[2];
             document.querySelector('#tire-rim').value = newMeasure[3];
-            document.querySelector('#tire-result').textContent = newMeasureText;
-
-            // HEREDA LAS MEDIDAS A LA LLANTA VIEJA DEL TÉCNICO
-            document.querySelector('#old-tire-width').value = newMeasure[1];
-            document.querySelector('#old-tire-height').value = newMeasure[2];
-            document.querySelector('#old-tire-rim').value = newMeasure[3];
-            document.querySelector('#old-tire-result').textContent = newMeasureText;
+            document.querySelector('#tire-result').textContent = installation.medida_llanta_nueva;
+            ['old-tire-width', 'old-tire-height', 'old-tire-rim'].forEach((id, index) => {
+              const el = document.querySelector(`#${id}`);
+              if (el) el.value = newMeasure[index + 1];
+            });
+            document.querySelector('#old-tire-rim')?.dispatchEvent(new Event('input', { bubbles: true }));
           }
+
           document.querySelector('#tire-quantity').value = installation.cantidad_llantas ?? '';
           serviceInputs.forEach((input) => { input.checked = (installation.servicios || []).includes(input.value); });
           document.querySelector('.notes-panel textarea').value = installation.observaciones_vendedor || '';
@@ -430,8 +434,17 @@ document.addEventListener('DOMContentLoaded', () => {
           const kmEl = document.querySelector('#technician-panel input[type="number"]');
           if (kmEl) kmEl.value = installation.kilometraje ?? '';
           
+          const oldMeasureText = installation.medida_llanta_vieja || installation.medida_llanta_nueva || '';
+          document.querySelector('#old-tire-result').textContent = oldMeasureText || '-';
+          const measure = oldMeasureText.match(/^(\d+)\/(\d+)R(\d+)$/);
+          if (measure) {
+            document.querySelector('#old-tire-width').value = measure[1];
+            document.querySelector('#old-tire-height').value = measure[2];
+            document.querySelector('#old-tire-rim').value = measure[3];
+          }
+          
           const oldBrandSelect = document.querySelector('#old-brand-select');
-          if(oldBrandSelect) oldBrandSelect.value = installation.marca_llanta_vieja || installation.marca_llanta_nueva || '';
+          if(oldBrandSelect) oldBrandSelect.value = installation.marca_llanta_vieja || '';
 
           const dotEl = document.querySelector('#manufacture-code');
           if (dotEl) dotEl.value = installation.codigo_dot || '';
@@ -447,15 +460,15 @@ document.addEventListener('DOMContentLoaded', () => {
           
           damagePins = installation.mapa_danos || [];
           renderDamagePins();
-        }
-        
-        if (order.instalacion && order.instalacion.consentimientos) {
-          syncConsentFromDB(order.instalacion.consentimientos);
+
+          if (installation.consentimientos) {
+            syncConsentFromDB(installation.consentimientos);
+          }
         }
         
         if(checklistStatus) checklistStatus.textContent = `${checklistInputs.filter((input) => input.checked).length} presentes`;
         if(invoicePanel) invoicePanel.hidden = true;
-        lookupMessage.textContent = `✓ Orden ${order.numero_orden} cargada con éxito.`;
+        lookupMessage.textContent = `✓ Orden ${order.numero_orden} cargada.`;
         
         updateOrderSummary();
         startConsentPolling(order.numero_orden);
@@ -466,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =======================================================
-  // 4. CONSENTIMIENTOS Y FIRMAS (TÉCNICO TIENE BOTÓN DE APROBAR)
+  // 4. CONSENTIMIENTOS Y FIRMAS 
   // =======================================================
   const consentPanel = document.createElement('section');
   consentPanel.className = 'panel consent-panel';
@@ -483,8 +496,6 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'alignment-installer', role: 'Instalador de alineación', service: 'Alineación' }
   ];
   
-  const savedConsent = JSON.parse(localStorage.getItem(`consent-${orderNumber}`) || '{}');
-  
   consentRows.forEach(({ id, role, email }) => {
     const row = document.createElement('div');
     row.className = 'consent-row';
@@ -493,12 +504,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const hideButtonStr = (id === 'client_reciclaje') ? 'style="display:none;"' : '';
     const userRole = sessionStorage.getItem('llantas_user_role');
     
-    // 👉 PERMITE APROBACIÓN MANUAL A TÉCNICOS, ASESORES Y ADMINS EN TODAS LAS FILAS (INCLUYENDO CLIENTES)
     let showApproveBtn = false;
     if (userRole === 'admin' || userRole === 'tecnico' || userRole === 'asesor') showApproveBtn = true;
 
-    const btnAprobarLocal = showApproveBtn 
-      ? `<button type="button" class="btn-mini-action btn-approve local-approve-btn" style="background:#d1fae5; margin-left:5px;">Aprobar</button>` 
+    const botonesAccionLocal = showApproveBtn 
+      ? `<div style="display:inline-flex; gap:4px; margin-left:5px;">
+           <button type="button" class="btn-mini-action btn-approve local-approve-btn" style="background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:4px 8px; border-radius:6px; font-weight:700; cursor:pointer;">✓ Aprobar</button>
+           <button type="button" class="btn-mini-action btn-reject local-reject-btn" style="background:#ffe4e6; color:#9f1239; border:1px solid #fca5a5; padding:4px 8px; border-radius:6px; font-weight:700; cursor:pointer;">✗ Rechazar</button>
+         </div>` 
       : '';
 
     row.innerHTML = `<strong class="consent-role">${role}</strong>
@@ -506,42 +519,41 @@ document.addEventListener('DOMContentLoaded', () => {
       <span class="consent-status">Pendiente</span>
       <div class="consent-actions">
         <button type="button" class="consent-button notify-button" ${hideButtonStr}>Notificar</button>
-        ${btnAprobarLocal}
+        ${botonesAccionLocal}
       </div>
       <p class="consent-note">Notificación por correo disponible.</p>`;
     
     row.querySelector('.consent-email').value = email || '';
-    const savedStatus = savedConsent[id]?.status;
-    if (savedStatus) setConsentStatus(row, savedStatus);
+    setConsentStatus(row, 'pending');
     
     row.querySelector('.notify-button').addEventListener('click', () => notifyConsent(row, role));
     
     const btnApprove = row.querySelector('.local-approve-btn');
     if (btnApprove) {
       btnApprove.addEventListener('click', async () => {
-        try {
-          const res = await fetch(`/api/aprobar-local/${encodeURIComponent(orderNumber)}/${id}`, { method: 'POST' });
-          if(res.ok) {
-            setConsentStatus(row, 'approved');
-            updateConsentState();
-            updateOrderSummary();
-          }
-        } catch(e) { console.error('Error aprobando local', e) }
+        setConsentStatus(row, 'approved');
+        updateConsentState();
+        updateOrderSummary();
+        
+        if (orderSaved || loadedOrder) {
+            try {
+              await fetch(`/api/aprobar-local/${encodeURIComponent(orderNumber)}/${id}`, { method: 'POST' });
+            } catch(e) {}
+        }
+      });
+    }
+
+    const btnReject = row.querySelector('.local-reject-btn');
+    if (btnReject) {
+      btnReject.addEventListener('click', async () => {
+        setConsentStatus(row, 'rejected');
+        updateConsentState();
+        updateOrderSummary();
       });
     }
 
     if(consentList) consentList.append(row);
   });
-
-  const mainEmailInput = document.querySelector('#customer-email');
-  if(mainEmailInput) {
-    mainEmailInput.addEventListener('input', (event) => {
-      const rowDatosEmail = document.querySelector('.consent-row[data-consent-id="client_datos"] .consent-email');
-      const rowReciclajeEmail = document.querySelector('.consent-row[data-consent-id="client_reciclaje"] .consent-email');
-      if(rowDatosEmail) rowDatosEmail.value = event.target.value;
-      if(rowReciclajeEmail) rowReciclajeEmail.value = event.target.value;
-    });
-  }
 
   async function notifyConsent(row, role) {
     const email = row.querySelector('.consent-email').value.trim();
@@ -583,35 +595,38 @@ document.addEventListener('DOMContentLoaded', () => {
     row.dataset.status = status;
     statusLabel.className = `consent-status ${status}`;
     
+    const btnNotify = row.querySelector('.notify-button');
+    const actionDiv = row.querySelector('.local-approve-btn')?.closest('div');
+
     if (status === 'pending') {
       statusLabel.textContent = 'Pendiente';
       noteText.textContent = 'Notificación por correo disponible.';
       row.style.background = '';
       row.style.borderColor = '';
+      if(btnNotify) btnNotify.style.display = row.dataset.consentId === 'client_reciclaje' ? 'none' : 'block';
+      if(actionDiv) actionDiv.style.display = 'inline-flex';
     } else if (status === 'notified') {
       statusLabel.textContent = 'Notificado';
       noteText.textContent = 'Correo enviado. Esperando respuesta...';
       row.style.background = '#eff6ff';
       row.style.borderColor = '#3b82f6';
+      if(btnNotify) btnNotify.style.display = row.dataset.consentId === 'client_reciclaje' ? 'none' : 'block';
+      if(actionDiv) actionDiv.style.display = 'inline-flex';
     } else if (status === 'approved') {
       statusLabel.textContent = 'Aprobado';
       noteText.textContent = '✓ Aprobado con éxito.';
       row.style.background = '#d9f8ed';
       row.style.borderColor = '#00bd7b';
-      const btn = row.querySelector('.notify-button');
-      if(btn) btn.style.display = 'none';
-      const localBtn = row.querySelector('.local-approve-btn');
-      if(localBtn) localBtn.style.display = 'none';
+      if(btnNotify) btnNotify.style.display = 'none';
+      if(actionDiv) actionDiv.style.display = 'none';
     } else if (status === 'rejected') {
       statusLabel.textContent = 'Rechazado';
       noteText.textContent = '✗ Rechazado.';
       row.style.background = '#fff3f3';
       row.style.borderColor = '#ed0010';
+      if(btnNotify) btnNotify.style.display = 'none';
+      if(actionDiv) actionDiv.style.display = 'none';
     }
-
-    const consentState = JSON.parse(localStorage.getItem(`consent-${orderNumber}`) || '{}');
-    consentState[row.dataset.consentId] = { status, at: new Date().toISOString() };
-    localStorage.setItem(`consent-${orderNumber}`, JSON.stringify(consentState));
   }
 
   function updateConsentState() {
@@ -620,9 +635,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const row = consentList.querySelector(`[data-consent-id="${id}"]`);
       if(row) {
         row.hidden = false;
-        if (!['approved', 'rejected', 'notified'].includes(row.dataset.status)) {
-          row.dataset.status = 'pending';
-          row.querySelector('.consent-status').textContent = 'Pendiente';
+        if (!row.dataset.status) {
+          setConsentStatus(row, 'pending');
         }
       }
     });
@@ -669,6 +683,10 @@ document.addEventListener('DOMContentLoaded', () => {
     consentRows.forEach(({ id }) => {
       const row = consentList.querySelector(`[data-consent-id="${id}"]`);
       if (!row) return;
+      
+      // Evita sobreescribir aprobaciones manuales
+      if (row.dataset.status === 'approved' || row.dataset.status === 'rejected') return;
+
       let datosGuardados = consentimientosBD[id]; 
       if (datosGuardados) {
         const estadoBD = datosGuardados.estado;
@@ -677,7 +695,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (estadoBD === 'rechazado') nuevoStatus = 'rejected';
         else if (estadoBD === 'notificado') nuevoStatus = 'notified';
 
-        if (row.dataset.status !== nuevoStatus && nuevoStatus !== 'pending') {
+        if (row.dataset.status !== nuevoStatus) {
           changed = true;
           setConsentStatus(row, nuevoStatus);
         }
@@ -690,7 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =======================================================
-  // 5. VISTAS Y AUTO-COPIADO DE MEDIDAS Y CORREO
+  // 5. EVENTOS Y FUNCIONES VARIAS
   // =======================================================
   document.querySelectorAll('.view-button').forEach((button) => {
     button.addEventListener('click', () => {
@@ -706,29 +724,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const headingKicker = document.querySelector('#heading-kicker');
       if(headingKicker) headingKicker.textContent = technician ? 'Datos para instalación' : 'Formulario de creación';
       if(pageTitle) pageTitle.textContent = technician ? 'Información del técnico' : 'Nueva Orden de Servicio';
-      
-      if (technician && document.querySelector('#old-tire-width')) {
-         const newW = document.querySelector('#tire-width')?.value || '';
-         const newH = document.querySelector('#tire-height')?.value || '';
-         const newR = document.querySelector('#tire-rim')?.value || '';
-         
-         document.querySelector('#old-tire-width').value = newW;
-         document.querySelector('#old-tire-height').value = newH;
-         document.querySelector('#old-tire-rim').value = newR;
-         document.querySelector('#old-tire-result').textContent = `${newW}/${newH}R${newR}`;
-         
-         const newBrand = document.querySelector('#new-brand')?.value || '';
-         const oldBrandSelect = document.querySelector('#old-brand-select');
-         if(oldBrandSelect && newBrand) oldBrandSelect.value = newBrand;
-
-         const clienteEmail = document.querySelector('#customer-email')?.value || '';
-         if(clienteEmail) {
-           const rDatos = document.querySelector('.consent-row[data-consent-id="client_datos"] .consent-email');
-           const rReciclaje = document.querySelector('.consent-row[data-consent-id="client_reciclaje"] .consent-email');
-           if(rDatos && !rDatos.value) rDatos.value = clienteEmail;
-           if(rReciclaje && !rReciclaje.value) rReciclaje.value = clienteEmail;
-         }
-      }
 
       if (technician) {
         if (!loadedOrder && statusNumber) statusNumber.textContent = 'Selecciona una orden';
@@ -748,6 +743,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('#old-tire-result').textContent = `${document.querySelector('#old-tire-width')?.value || 0}/${document.querySelector('#old-tire-height')?.value || 0}R${document.querySelector('#old-tire-rim')?.value || 0}`;
   }));
 
+  const tireDimensionPairs = [['tire-width', 'old-tire-width'], ['tire-height', 'old-tire-height'], ['tire-rim', 'old-tire-rim']];
+  const oldTireDimensionsEdited = new Set();
+  tireDimensionPairs.forEach(([, oldId]) => {
+    document.querySelector(`#${oldId}`)?.addEventListener('input', () => oldTireDimensionsEdited.add(oldId));
+  });
+  tireDimensionPairs.forEach(([newId, oldId]) => {
+    document.querySelector(`#${newId}`)?.addEventListener('input', () => {
+      const oldInput = document.querySelector(`#${oldId}`);
+      if (oldInput && !oldTireDimensionsEdited.has(oldId)) oldInput.value = document.querySelector(`#${newId}`).value;
+      oldInput?.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  });
+
   serviceInputs.forEach((input) => input.addEventListener('change', () => {
     updateSummary();
     updateConsentState();
@@ -756,6 +764,36 @@ document.addEventListener('DOMContentLoaded', () => {
   if(licensePlate) licensePlate.addEventListener('input', () => { licensePlate.value = licensePlate.value.toUpperCase(); });
   const customerPhone = document.querySelector('#customer-phone');
   if (customerPhone) customerPhone.addEventListener('input', (event) => { event.target.value = event.target.value.replace(/\D/g, '').slice(0, 10); });
+
+  document.querySelectorAll('.brand-select').forEach((select) => {
+    select.addEventListener('change', () => {
+      const customBrand = select.closest('section, .technical-details')?.querySelector('.brand-custom');
+      if (customBrand) {
+        customBrand.hidden = select.value !== 'Otra marca';
+        if (!customBrand.hidden) customBrand.querySelector('input')?.focus();
+      }
+    });
+  });
+
+  if(checklistStatus) {
+    checklistInputs.forEach((input) => input.addEventListener('change', () => {
+      const completed = getPresentItems().length;
+      checklistStatus.textContent = `${completed} presente${completed === 1 ? '' : 's'}`;
+      checklistStatus.classList.toggle('complete', completed > 0);
+    }));
+    quantityInputs.forEach((input) => input.addEventListener('input', () => {
+      const checkbox = input.closest('.quantity-check')?.querySelector('input[type="checkbox"]');
+      if (checkbox) checkbox.checked = Number(input.value) > 0;
+      checklistInputs[0].dispatchEvent(new Event('change'));
+    }));
+  }
+
+  function getPresentItems() {
+    return checklistInputs.filter((input) => input.checked).map((input) => {
+      const quantity = input.closest('.quantity-check')?.querySelector('.item-quantity');
+      return quantity?.value ? `${input.value}: ${quantity.value}` : input.value;
+    });
+  }
 
   function updateSummary() {
     const selected = serviceInputs.filter((input) => input.checked).map((input) => input.value);
@@ -767,9 +805,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // =======================================================
   // 6. RESUMEN Y PDF
   // =======================================================
+  function getConsentText(id) {
+    const row = document.querySelector(`.consent-row[data-consent-id="${id}"]`);
+    if (!row) return 'No solicitado';
+    const status = row.dataset.status;
+    if (status === 'approved') return '✅ Aprobado';
+    if (status === 'rejected') return '❌ Rechazado';
+    if (status === 'notified') return '⏳ Notificado (Esperando)';
+    return 'Pendiente';
+  }
+
   function updateOrderSummary() {
     const newBrand = document.querySelector('#new-brand')?.value || '';
-    const oldBrand = (document.querySelector('#technician-panel .brand-select'))?.value || '';
+    const oldBrand = (document.querySelector('#technician-panel .brand-select') || document.querySelector('.technical-details .brand-select'))?.value || '';
     const services = serviceInputs.filter((input) => input.checked).map((input) => input.value);
     if (otherService && otherService.value.trim()) services.push(otherService.value.trim());
     
@@ -779,24 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const mapPreviewHtml = `<div style="position:relative; display:inline-block; border:1px solid #ccc; border-radius:4px; overflow:hidden; max-width:140px; background:#fff;"><img src="assets/images/mapa de daño.png" alt="Mapa" style="display:block; width:100%; height:auto;" />${pinsSummaryHtml}</div>`;
 
-    const presentItems = checklistInputs.filter((input) => input.checked).map((input) => {
-      const quantity = input.closest('.quantity-check')?.querySelector('.item-quantity');
-      return quantity?.value ? `${input.value}: ${quantity.value}` : input.value;
-    });
-
-    let firmasHtml = '';
-    if (consentList) {
-        const visibleConsentRows = Array.from(consentList.querySelectorAll('.consent-row:not([hidden])'));
-        firmasHtml = visibleConsentRows.map(row => {
-          const role = row.querySelector('.consent-role').textContent;
-          const status = row.dataset.status;
-          let statusDisplay = 'Firma: _____________';
-          if (status === 'approved') statusDisplay = '<span style="color: #00bd7b; font-weight: bold;">✓ Aprobado</span>';
-          else if (status === 'rejected') statusDisplay = '<span style="color: #ed0010; font-weight: bold;">✗ Rechazado</span>';
-          
-          return `<span style="display: inline-block; width: 48%; margin-bottom: 4px; font-size: 10px;"><strong>${role}:</strong> ${statusDisplay}</span>`;
-        }).join('');
-    }
+    const presentItems = getPresentItems();
 
     const salespersonVal = document.querySelector('#salesperson')?.value;
     const finalSalesperson = salespersonVal === 'Otro asesor' ? document.querySelector('#salesperson-custom-name')?.value : salespersonVal;
@@ -809,19 +840,23 @@ document.addEventListener('DOMContentLoaded', () => {
       ['Inspección Vehicular', `Placa: ${document.querySelector('#license-plate')?.value || 'N/A'} | Km: ${document.querySelector('#technician-panel input[type="number"]')?.value || '0'}<br>Vieja: ${oldBrand} (${document.querySelector('#old-tire-result')?.textContent}) [DOT: ${document.querySelector('#manufacture-code')?.value || 'N/A'}]`],
       ['Inventario / Daños', `Presentes: ${presentItems.join(', ') || 'Ninguno'}<br>Ingreso: ${document.querySelector('.technical-notes')?.value || 'Sin novedades'}`],
       ['Mapa de Daños', damagePins.length > 0 ? mapPreviewHtml : 'Sin daños reportados'],
-      ['Firmas y Autorizaciones', firmasHtml || 'Pendiente de aprobación']
+      ['Firma: Protección de Datos', getConsentText('client_datos')],
+      ['Firma: Reciclaje de Llantas', getConsentText('client_reciclaje')],
+      ['Firma: Asesor', getConsentText('advisor')],
+      ['Firma: Instalador Enllantaje', getConsentText('tire-installer')],
+      ['Firma: Instalador Alineación', getConsentText('alignment-installer')]
     ];
 
     const summaryBody = document.querySelector('#order-summary-body');
     if (summaryBody) {
-      summaryBody.innerHTML = rows.map(([label, value]) => `<tr><th style="width:28%; padding:4px 6px; font-size:9px;">${label}</th><td style="padding:4px 6px; font-size:10px;">${value}</td></tr>`).join('');
+      summaryBody.innerHTML = rows.map(([label, value]) => `<tr><th style="width:28%; padding:4px 6px; font-size:9px;">${label}</th><td style="padding:4px 6px; font-size:10px;">${value || 'No registrado'}</td></tr>`).join('');
     }
     const summaryPanel = document.querySelector('#order-summary-panel');
     if (summaryPanel) summaryPanel.hidden = false;
   }
 
   // =======================================================
-  // 7. BOTONES FINALES Y VALIDACIÓN DIFERENCIADA
+  // 7. BOTONES FINALES Y GUARDADO
   // =======================================================
   if (newInstallationOrderButton) {
     newInstallationOrderButton.innerHTML = '➕ Crear Nueva Orden';
@@ -830,7 +865,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (orderActions) orderActions.appendChild(newInstallationOrderButton);
   }
 
-  // Validación Ventas: Solo requiere la aprobación del asesor
   if(orderForm) {
     orderForm.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -848,6 +882,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (orderSaved) {
+        message.style.color = 'var(--red)';
         message.textContent = 'Esta orden ya fue guardada. Usa Crear Nueva Orden para hacer otra.';
         return;
       }
@@ -883,13 +918,27 @@ document.addEventListener('DOMContentLoaded', () => {
           loadedOrder = true;
           orderSaved = true;
           setOrderNumber(result.numero_orden);
-          if(lookupInput) lookupInput.value = result.numero_orden;
+          const currentLookupInput = document.querySelector('#lookup-order-number');
+          if(currentLookupInput) currentLookupInput.value = result.numero_orden;
           sessionStorage.setItem('activeOrderNumber', result.numero_orden);
         }
         message.style.color = 'var(--green)';
         message.textContent = `✓ ${result.mensaje || 'Orden guardada correctamente'}`;
         submitButton.disabled = true;
         submitButton.innerHTML = '<span>✓</span> Orden guardada';
+        
+        const consentListEl = document.querySelector('.consent-list');
+        if (consentListEl) {
+            const rows = consentListEl.querySelectorAll('.consent-row');
+            for (const r of rows) {
+                if (r.dataset.status === 'approved') {
+                    try {
+                        await fetch(`/api/aprobar-local/${encodeURIComponent(result.numero_orden)}/${r.dataset.consentId}`, { method: 'POST' });
+                    } catch(e) {}
+                }
+            }
+        }
+
         updateOrderSummary();
         startConsentPolling(result.numero_orden);
       } catch (error) {
@@ -902,65 +951,51 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Validación Técnico: Exige que absolutamente TODO esté aprobado
-  if(saveTechnicianBtn) {
-    saveTechnicianBtn.addEventListener('click', async () => {
-      const message = document.querySelector('#technician-message');
-      
-      if (orderNumber === '#ORD-2026-0000') {
-        message.style.color = 'var(--red)';
-        message.textContent = 'Primero guarda la orden del cliente.';
-        return;
-      }
-      
-      const consentList = document.querySelector('.consent-list');
-      if(consentList) {
-        const visibleRows = [...consentList.querySelectorAll('.consent-row:not([hidden])')];
-        const unapproved = visibleRows.filter((row) => row.dataset.status !== 'approved');
-        
-        if (unapproved.length > 0) {
-          const rolesFaltantes = unapproved.map(r => r.querySelector('.consent-role').textContent).join(', ');
-          message.style.color = 'var(--red)';
-          message.textContent = `⚠️ Faltan firmas obligatorias por aprobar: [ ${rolesFaltantes} ]. Apruébelas antes de guardar la instalación.`;
-          return;
-        }
-      }
+  // 👉 EL BOTÓN DEL TÉCNICO IDÉNTICO AL TUYO FUNCIONAL (No hace validación de consentimientos)
+  document.querySelector('#save-technician').addEventListener('click', async () => {
+    const message = document.querySelector('#technician-message');
+    const saveButton = document.querySelector('#save-technician');
+    if (orderNumber === '#ORD-2026-0000') {
+      message.textContent = 'Primero guarda la orden del cliente.';
+      return;
+    }
+    const oldTireBrand = (document.querySelector('#technician-panel .brand-select') || document.querySelector('.technical-details .brand-select'))?.value || '';
+    
+    const installationData = {
+      placa: licensePlate.value.trim(),
+      kilometraje: document.querySelector('#technician-panel input[type="number"]')?.value ? Number(document.querySelector('#technician-panel input[type="number"]').value) : null,
+      marca_llanta_vieja: oldTireBrand,
+      medida_llanta_vieja: document.querySelector('#old-tire-result').textContent,
+      codigo_dot: document.querySelector('#manufacture-code')?.value || '',
+      elementos_presentes: getPresentItems(),
+      observaciones_ingreso: document.querySelector('.technical-notes')?.value.trim() || '',
+      mapa_danos: damagePins 
+    };
 
-      const oldTireBrand = document.querySelector('#old-brand-select')?.value || '';
-      
-      const installationData = {
-        placa: licensePlate.value.trim(),
-        kilometraje: document.querySelector('#technician-panel input[type="number"]')?.value ? Number(document.querySelector('#technician-panel input[type="number"]').value) : null,
-        marca_llanta_vieja: oldTireBrand,
-        medida_llanta_vieja: document.querySelector('#old-tire-result').textContent,
-        codigo_dot: document.querySelector('#manufacture-code')?.value || '',
-        elementos_presentes: getPresentItems(),
-        observaciones_ingreso: document.querySelector('.technical-notes')?.value.trim() || '',
-        mapa_danos: damagePins 
-      };
-
-      saveTechnicianBtn.disabled = true;
+    saveButton.disabled = true;
+    message.style.color = 'var(--green)';
+    message.textContent = 'Guardando instalación...';
+    try {
+      const response = await fetch(`/api/guardar-instalacion/${encodeURIComponent(orderNumber)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(installationData)
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.detail || 'No se pudo guardar la instalación.');
       message.style.color = 'var(--green)';
-      message.textContent = 'Guardando instalación...';
-      try {
-        const response = await fetch(`/api/guardar-instalacion/${encodeURIComponent(orderNumber)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(installationData)
-        });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.detail || 'No se pudo guardar la instalación.');
-        message.textContent = `✓ ${result.mensaje}`;
-        updateOrderSummary();
-      } catch (error) {
-        message.style.color = 'var(--red)';
-        message.textContent = `Error al guardar: ${error.message}`;
-      } finally {
-        saveTechnicianBtn.disabled = false;
-        setTimeout(() => { message.textContent = ''; }, 5000);
-      }
-    });
-  }
+      message.textContent = `✓ ${result.mensaje}`;
+      updateOrderSummary();
+      const summaryPanel = document.querySelector('#order-summary-panel');
+      if(summaryPanel) summaryPanel.hidden = false;
+    } catch (error) {
+      message.style.color = 'var(--red)';
+      message.textContent = `Error al guardar: ${error.message}`;
+    } finally {
+      saveButton.disabled = false;
+      setTimeout(() => { message.textContent = ''; }, 5000);
+    }
+  });
 
   if(newInstallationOrderButton) {
     newInstallationOrderButton.addEventListener('click', () => {
@@ -1002,7 +1037,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       loadNextOrderNumber();
       
-      const consentList = document.querySelector('.consent-list');
       if(consentList) {
         consentList.querySelectorAll('.consent-row').forEach((row) => {
           row.dataset.status = 'pending';

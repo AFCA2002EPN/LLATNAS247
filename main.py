@@ -333,56 +333,75 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
         
         texto_plano = f"Se solicita revisar y responder la orden {numero_orden}.\n\nAceptar: {aceptar}\nRechazar: {rechazar}\n"
         
+        # 👉 CORREOS CREATIVOS, FORMALES Y ESTILO BANCARIO
         if responsable == "client_datos":
-            asunto = f"LOPDP: Protección de Datos - Orden {numero_orden}"
+            asunto = f"[Seguridad y Privacidad] Autorización de Datos Personales (LOPDP) - Orden {numero_orden}"
             html_content = f"""
-            <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
-              <div style="background-color: #10182e; padding: 20px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+              <div style="background: linear-gradient(135deg, #10182e 0%, #1e2c4d 100%); padding: 30px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
+                <p style="color: #9fb0cc; margin: 6px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px;">Protección de Datos y Confidencialidad</p>
               </div>
-              <div style="padding: 30px 20px;">
-                <h2 style="color: #111827; margin-top: 0; text-align: center;">Autorización de Datos Personales</h2>
-                <div style="background-color: #f8fafc; border-left: 4px solid #ed0010; padding: 15px; margin: 20px 0;">
-                  <p style="margin: 0; font-size: 14px; color: #4b5563;">Estimado/a <strong>{cliente_nombre}</strong>, autorizo a Llantas 247 para el tratamiento de mis datos personales.</p>
+              <div style="padding: 36px 30px;">
+                <h2 style="color: #111827; margin-top: 0; font-size: 18px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px;">Estimado/a <strong>{cliente_nombre}</strong>,</h2>
+                <p style="color: #4b5563; font-size: 14px; line-height: 1.6;">En cumplimiento de la Ley Orgánica de Protección de Datos Personales (LOPDP), en <strong>Llantas 247</strong> garantizamos la seguridad absoluta de su información.</p>
+                <p style="color: #4b5563; font-size: 14px; line-height: 1.6;">Para proceder con el registro, mantenimiento y trazabilidad vehicular de su Orden de Servicio <strong>{numero_orden}</strong>, requerimos su consentimiento previo y expreso.</p>
+                
+                <div style="background-color: #f8fafc; border-left: 4px solid #ed0010; padding: 16px; margin: 24px 0; border-radius: 0 8px 8px 0;">
+                  <p style="margin: 0; font-size: 13px; color: #334155; line-height: 1.5;">Sus datos serán tratados exclusivamente para fines comerciales, de facturación y notificaciones operativas autorizadas.</p>
                 </div>
-                <div style="text-align: center; margin-top: 30px;">
-                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px;">Aceptar</a>
-                  <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; border: 1px solid #d1d5db;">Rechazar</a>
+                
+                <div style="text-align: center; margin-top: 36px;">
+                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 14px; box-shadow: 0 4px 12px rgba(0,189,123,0.3); margin-right: 12px;">Aceptar y Autorizar</a>
+                  <a href="{rechazar}" style="display: inline-block; background-color: #f1f5f9; color: #64748b; text-decoration: none; padding: 14px 24px; border-radius: 8px; font-weight: bold; font-size: 14px; border: 1px solid #cbd5e1;">Rechazar</a>
                 </div>
+              </div>
+              <div style="background-color: #f8fafc; padding: 18px; text-align: center; border-top: 1px solid #e2e8f0;">
+                <p style="margin: 0; font-size: 11px; color: #94a3b8;">Aviso de Confidencialidad: Este mensaje es seguro y exclusivo para el destinatario.</p>
               </div>
             </div>
             """
         elif responsable == "client_reciclaje":
-            asunto = f"Autorización de Reciclaje - Orden {numero_orden}"
+            asunto = f"[Compromiso Ambiental] Autorización de Reciclaje de Neumáticos - Orden {numero_orden}"
             html_content = f"""
-            <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
-              <div style="background-color: #10182e; padding: 20px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+              <div style="background: linear-gradient(135deg, #10182e 0%, #1e2c4d 100%); padding: 30px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
+                <p style="color: #9fb0cc; margin: 6px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px;">Gestión Ambiental Responsable</p>
               </div>
-              <div style="padding: 30px 20px;">
-                <h2 style="color: #111827; margin-top: 0; text-align: center;">Autorización de Reciclaje</h2>
-                <div style="background-color: #f8fafc; border-left: 4px solid #ed0010; padding: 15px; margin: 20px 0;">
-                  <p style="margin: 0; font-size: 14px; color: #4b5563;">Estimado/a <strong>{cliente_nombre}</strong>, autorizo a Llantas 247 a reciclar mis llantas usadas.</p>
+              <div style="padding: 36px 30px;">
+                <h2 style="color: #111827; margin-top: 0; font-size: 18px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px;">Estimado/a <strong>{cliente_nombre}</strong>,</h2>
+                <p style="color: #4b5563; font-size: 14px; line-height: 1.6;">En Llantas 247 estamos comprometidos con el cuidado del medio ambiente y el desarrollo sostenible.</p>
+                <p style="color: #4b5563; font-size: 14px; line-height: 1.6;">Conforme a las normativas ecológicas vigentes, solicitamos su autorización para proceder con la recolección, disposición final y tratamiento ecológico (reciclaje) de los neumáticos usados que serán sustituidos en su vehículo bajo la Orden <strong>{numero_orden}</strong>.</p>
+                
+                <div style="background-color: #f8fafc; border-left: 4px solid #00bd7b; padding: 16px; margin: 24px 0; border-radius: 0 8px 8px 0;">
+                  <p style="margin: 0; font-size: 13px; color: #334155; line-height: 1.5;">Mediante esta validación, usted cede los neumáticos retirados para evitar la contaminación ambiental, eximiendo de responsabilidad futura sobre los mismos.</p>
                 </div>
-                <div style="text-align: center; margin-top: 30px;">
-                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px;">Aceptar</a>
-                  <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; border: 1px solid #d1d5db;">Rechazar</a>
+                
+                <div style="text-align: center; margin-top: 36px;">
+                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 14px; box-shadow: 0 4px 12px rgba(0,189,123,0.3); margin-right: 12px;">Aceptar y Autorizar</a>
+                  <a href="{rechazar}" style="display: inline-block; background-color: #f1f5f9; color: #64748b; text-decoration: none; padding: 14px 24px; border-radius: 8px; font-weight: bold; font-size: 14px; border: 1px solid #cbd5e1;">Rechazar</a>
                 </div>
+              </div>
+              <div style="background-color: #f8fafc; padding: 18px; text-align: center; border-top: 1px solid #e2e8f0;">
+                <p style="margin: 0; font-size: 11px; color: #94a3b8;">Llantas 247 · Innovación y tecnología en servicios automotrices con conciencia ecológica.</p>
               </div>
             </div>
             """
         else:
-            asunto = f"Consentimiento requerido - Orden {numero_orden}"
+            asunto = f"[Operativo] Solicitud de Validación Interna - Orden {numero_orden}"
             html_content = f"""
-            <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
-              <div style="background-color: #10182e; padding: 20px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+              <div style="background: linear-gradient(135deg, #10182e 0%, #1e2c4d 100%); padding: 30px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
+                <p style="color: #9fb0cc; margin: 6px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px;">Control Operativo de Taller</p>
               </div>
-              <div style="padding: 30px 20px; text-align: center;">
-                <h2 style="color: #111827; margin-top: 0;">Autorización Interna</h2>
-                <div style="margin-top: 30px;">
-                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px;">Aprobar</a>
-                  <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; border: 1px solid #d1d5db;">Rechazar</a>
+              <div style="padding: 36px 30px; text-align: center;">
+                <h2 style="color: #111827; margin-top: 0; font-size: 18px;">Aprobación Técnica Requerida</h2>
+                <p style="color: #4b5563; font-size: 14px; line-height: 1.6;">Se ha generado una solicitud de validación para el avance y registro operativo de la Orden de Servicio <strong>{numero_orden}</strong>.</p>
+                <div style="margin-top: 36px;">
+                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 14px; margin-right: 12px;">Aprobar Orden</a>
+                  <a href="{rechazar}" style="display: inline-block; background-color: #f1f5f9; color: #64748b; text-decoration: none; padding: 14px 24px; border-radius: 8px; font-weight: bold; font-size: 14px; border: 1px solid #cbd5e1;">Rechazar</a>
                 </div>
               </div>
             </div>
@@ -462,7 +481,7 @@ def responder_consentimiento(token: str, estado: str):
                     break
             
             if not fila_encontrada:
-                raise HTTPException(status_code=404, detail="Enlace de consentimiento no válido.")
+                raise HTTPException(status_code=404, detail="Enlace no válido.")
             
             consentimiento_actual = datos_json["consentimientos"][responsable_encontrado]
             if consentimiento_actual.get("estado") in {"aprobado", "rechazado"}:
