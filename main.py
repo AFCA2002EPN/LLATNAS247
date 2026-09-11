@@ -100,6 +100,10 @@ def preparar_tabla(cursor):
         cursor.execute("INSERT INTO usuarios (usuario, password, rol) VALUES ('ventas', 'ventas123', 'asesor')")
         cursor.execute("INSERT INTO usuarios (usuario, password, rol) VALUES ('tecnico', 'tecnico123', 'tecnico')")
 
+    cursor.execute("SELECT COUNT(*) FROM usuarios WHERE usuario = 'reportes'")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("INSERT INTO usuarios (usuario, password, rol) VALUES ('reportes', 'reportes123', 'reporteria')")
+
     cursor.execute("SELECT COUNT(*) FROM ordenes")
     if cursor.fetchone()[0] == 0:
         cursor.execute("ALTER SEQUENCE ordenes_numero_seq RESTART WITH 1")
@@ -332,18 +336,18 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
         if responsable == "client_datos":
             asunto = f"LOPDP: Protección de Datos - Orden {numero_orden}"
             html_content = f"""
-            <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
               <div style="background-color: #10182e; padding: 20px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 2px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
               </div>
               <div style="padding: 30px 20px;">
                 <h2 style="color: #111827; margin-top: 0; text-align: center;">Autorización de Datos Personales</h2>
                 <div style="background-color: #f8fafc; border-left: 4px solid #ed0010; padding: 15px; margin: 20px 0;">
-                  <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.5;">Estimado/a <strong>{cliente_nombre}</strong>, de conformidad con la Ley Orgánica de Protección de Datos Personales (Ecuador), autorizo de manera libre, previa y expresa a Llantas 247 para el tratamiento, almacenamiento y uso de mis datos personales con fines comerciales, de facturación y notificaciones operativas relacionadas con mi vehículo.</p>
+                  <p style="margin: 0; font-size: 14px; color: #4b5563;">Estimado/a <strong>{cliente_nombre}</strong>, autorizo a Llantas 247 para el tratamiento de mis datos personales.</p>
                 </div>
                 <div style="text-align: center; margin-top: 30px;">
-                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px; font-size: 15px;">Aceptar y Autorizar</a>
-                  <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 15px; border: 1px solid #d1d5db;">Rechazar</a>
+                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px;">Aceptar</a>
+                  <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; border: 1px solid #d1d5db;">Rechazar</a>
                 </div>
               </div>
             </div>
@@ -351,18 +355,18 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
         elif responsable == "client_reciclaje":
             asunto = f"Autorización de Reciclaje - Orden {numero_orden}"
             html_content = f"""
-            <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
               <div style="background-color: #10182e; padding: 20px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 2px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
               </div>
               <div style="padding: 30px 20px;">
                 <h2 style="color: #111827; margin-top: 0; text-align: center;">Autorización de Reciclaje</h2>
                 <div style="background-color: #f8fafc; border-left: 4px solid #ed0010; padding: 15px; margin: 20px 0;">
-                  <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.5;">Estimado/a <strong>{cliente_nombre}</strong>, autorizo a Llantas 247 a disponer de mis llantas usadas (retiradas del vehículo) para su correcto tratamiento y reciclaje ambiental, renunciando a cualquier reclamo posterior sobre las mismas.</p>
+                  <p style="margin: 0; font-size: 14px; color: #4b5563;">Estimado/a <strong>{cliente_nombre}</strong>, autorizo a Llantas 247 a reciclar mis llantas usadas.</p>
                 </div>
                 <div style="text-align: center; margin-top: 30px;">
-                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px; font-size: 15px;">Aceptar y Autorizar</a>
-                  <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 15px; border: 1px solid #d1d5db;">Rechazar</a>
+                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px;">Aceptar</a>
+                  <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; border: 1px solid #d1d5db;">Rechazar</a>
                 </div>
               </div>
             </div>
@@ -370,16 +374,15 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
         else:
             asunto = f"Consentimiento requerido - Orden {numero_orden}"
             html_content = f"""
-            <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
               <div style="background-color: #10182e; padding: 20px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 2px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">LLANTAS <span style="color: #ed0010;">247</span></h1>
               </div>
-              <div style="padding: 30px 20px;">
-                <h2 style="color: #111827; margin-top: 0; text-align: center;">Autorización de Orden {numero_orden}</h2>
-                <p style="color: #4b5563; line-height: 1.5; font-size: 15px; text-align: center;">Estimado/a Asesor/a, se requiere su revisión y aprobación para continuar con esta orden.</p>
-                <div style="text-align: center; margin-top: 30px;">
-                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px; font-size: 15px;">Aprobar Orden</a>
-                  <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 15px; border: 1px solid #d1d5db;">Rechazar</a>
+              <div style="padding: 30px 20px; text-align: center;">
+                <h2 style="color: #111827; margin-top: 0;">Autorización Interna</h2>
+                <div style="margin-top: 30px;">
+                  <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px;">Aprobar</a>
+                  <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; border: 1px solid #d1d5db;">Rechazar</a>
                 </div>
               </div>
             </div>
@@ -395,6 +398,37 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
         if conexion:
             conexion.rollback()
         raise HTTPException(status_code=500, detail="No se pudo enviar la notificación.") from error
+    finally:
+        if conexion:
+            conexion.close()
+
+@app.post("/api/aprobar-local/{numero_orden}/{responsable}")
+def aprobar_local(numero_orden: str, responsable: str):
+    conexion = None
+    try:
+        conexion = conectar()
+        with conexion.cursor() as cursor:
+            cursor.execute("SELECT instalacion FROM ordenes WHERE numero_orden = %s", (numero_orden,))
+            fila = cursor.fetchone()
+            if not fila:
+                raise HTTPException(status_code=404, detail="Orden no encontrada")
+            
+            datos = fila[0] or {}
+            tokens = datos.get("consentimientos", {})
+            
+            if responsable not in tokens:
+                tokens[responsable] = {"token": "firma_local", "estado": "aprobado", "correo": "Aprobación Física (Web)"}
+            else:
+                tokens[responsable]["estado"] = "aprobado"
+                
+            datos["consentimientos"] = tokens
+            cursor.execute("UPDATE ordenes SET instalacion = %s::jsonb WHERE numero_orden = %s", (json.dumps(datos), numero_orden))
+        conexion.commit()
+        return {"mensaje": "Aprobado localmente"}
+    except Exception as e:
+        if conexion:
+            conexion.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         if conexion:
             conexion.close()
@@ -441,7 +475,6 @@ def responder_consentimiento(token: str, estado: str):
                 """, status_code=200)
             
             consentimiento_actual["estado"] = estado
-            
             cursor.execute("UPDATE ordenes SET instalacion = %s::jsonb WHERE numero_orden = %s", (json.dumps(datos_json), fila_encontrada))
         conexion.commit()
         
@@ -468,6 +501,54 @@ def responder_consentimiento(token: str, estado: str):
         if conexion:
             conexion.rollback()
         raise
+    finally:
+        if conexion:
+            conexion.close()
+
+@app.get("/api/reportes")
+def obtener_reportes(fecha_inicio: str = None, fecha_fin: str = None, asesor: str = None, sucursal: str = None):
+    conexion = None
+    try:
+        conexion = conectar()
+        with conexion.cursor() as cursor:
+            query = "SELECT numero_orden, fecha, cliente, asesor, sucursal, instalacion FROM ordenes WHERE 1=1"
+            params = []
+            
+            if fecha_inicio:
+                query += " AND fecha >= %s"
+                params.append(fecha_inicio)
+            if fecha_fin:
+                query += " AND fecha <= %s"
+                params.append(fecha_fin)
+            if asesor:
+                query += " AND asesor = %s"
+                params.append(asesor)
+            if sucursal:
+                query += " AND sucursal = %s"
+                params.append(sucursal)
+            
+            query += " ORDER BY fecha DESC"
+            cursor.execute(query, tuple(params))
+            
+            resultados = []
+            for r in cursor.fetchall():
+                inst = r[5] or {}
+                servicios = inst.get("servicios", [])
+                placa = inst.get("placa", "N/A")
+                if not placa: placa = "N/A"
+                
+                resultados.append({
+                    "numero_orden": r[0],
+                    "fecha": r[1].isoformat(),
+                    "cliente": r[2],
+                    "asesor": r[3] or '-',
+                    "sucursal": r[4],
+                    "placa": placa,
+                    "servicios": ", ".join(servicios) if servicios else "Ninguno"
+                })
+            return {"reportes": resultados}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         if conexion:
             conexion.close()

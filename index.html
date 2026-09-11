@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    #order-form[hidden], #technician-panel[hidden] { display: none; }
+    #order-form[hidden], #technician-panel[hidden], #reporter-panel[hidden] { display: none !important; }
     .technical-details { padding: 20px; display: grid; gap: 16px; }
     .technical-details h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; }
     .technical-details .field-grid { padding: 0; margin: 0; }
@@ -31,7 +31,7 @@
     .login-panel { background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 380px; display: grid; gap: 15px; }
     .login-panel h2 { margin: 0 0 10px; text-align: center; color: #10182e; font-size: 24px; }
     .login-panel img { display: block; margin: 0 auto 20px; width: 150px; }
-    @media print { .topbar, .page-heading, footer, .views, #order-form, #technician-panel, .consent-panel, .summary-actions { display: none !important; } #order-summary-panel { display: block !important; border: 0; box-shadow: none; } body { background: #fff; } }
+    @media print { .topbar, .page-heading, footer, .views, #order-form, #technician-panel, .consent-panel, .summary-actions, #reporter-panel { display: none !important; } #order-summary-panel { display: block !important; border: 0; box-shadow: none; } body { background: #fff; } }
     .check-row { min-height: 44px; gap: 10px; padding: 0 13px; }
     .check-row input { position: static; opacity: 1; width: 17px; height: 17px; accent-color: var(--red); flex: 0 0 auto; }
     .check-row:has(input:checked) { border-color: #ffafb3; background: #fff3f3; }
@@ -61,8 +61,15 @@
         <button class="view-button active" data-view="seller">Vista del vendedor</button>
         <button class="view-button" data-view="technician">Vista del técnico</button> 
       </nav>
-      <div class="order-number"><span>ORDEN ACTUAL</span><strong>#ORD-2026-0000</strong></div>
-      <div class="shop-status"><span>TALLER ACTIVO</span><em><i></i> En línea</em></div>
+      <nav class="views-reporter" hidden style="margin-left: 32px; border-left: 1px solid #34405b; padding-left: 32px; font-weight: bold; color: #8ca0c1; text-transform: uppercase;">
+        Módulo de Reportería
+      </nav>
+
+      <div class="order-number"><span>ORDEN ACTUAL</span><strong id="header-order-number">#ORD-2026-0000</strong></div>
+      <div class="shop-status">
+        <span id="current-user-badge" style="margin-right: 15px; color: #8ca0c1; font-weight: bold; text-transform: uppercase; border-right: 1px solid #34405b; padding-right: 15px;"></span>
+        <span>TALLER ACTIVO</span><em><i></i> En línea</em>
+      </div>
       <button id="logout-button" class="view-button" style="margin-left: 20px; border-color: var(--red); color: var(--red);">Cerrar sesión</button>
     </header>
     
@@ -83,7 +90,57 @@
           </label>
         </div>
       </section>
+
+      <!-- VISTA DE REPORTES -->
+      <section class="panel" id="reporter-panel" hidden style="max-width: 1210px; margin: 24px auto;">
+        <div class="panel-title">Filtros de Búsqueda Avanzados</div>
+        <div class="field-grid" style="grid-template-columns: repeat(4, 1fr);">
+          <label>Sucursal
+            <select id="rep-sucursal">
+              <option value="">Todas las sucursales</option>
+              <option value="Granados">Granados</option>
+              <option value="Valle de los Chillos">Valle de los Chillos</option>
+              <option value="Guayaquil">Guayaquil</option>
+            </select>
+          </label>
+          <label>Asesor de Ventas
+            <select id="rep-asesor">
+              <option value="">Todos los asesores</option>
+              <option>Daynet Diaz</option>
+              <option>Jeaneth Recalde</option>
+              <option>Gabriela Montoya</option>
+            </select>
+          </label>
+          <label>Fecha Inicio<input type="date" id="rep-inicio"></label>
+          <label>Fecha Fin<input type="date" id="rep-fin"></label>
+        </div>
+        <div style="display: flex; gap: 10px; margin: 20px; padding: 0;">
+          <button class="save-button" type="button" id="btn-generar-reporte" style="flex: 1; background: var(--navy);">Consultar Estadísticas</button>
+          <button class="save-button" type="button" id="btn-exportar-csv" style="flex: 0 0 auto; background: #00bd7b; display: none;">⬇️ Exportar a Excel</button>
+        </div>
+        
+        <div class="panel-title" style="border-top: 1px solid var(--line);">Resultados de Órdenes <b id="rep-total" style="background:#eff6ff; color:#2563eb; padding:5px 10px; border-radius:14px; font-size:10px; float:right;">0 encontradas</b></div>
+        <div style="overflow-x: auto;">
+          <table class="order-summary-table" id="tabla-reportes" style="margin-bottom: 30px; min-width: 900px;">
+            <thead>
+              <tr>
+                <th>No. Orden</th>
+                <th>Fecha</th>
+                <th>Sucursal</th>
+                <th>Asesor</th>
+                <th>Cliente</th>
+                <th>Placa</th>
+                <th>Servicios</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="7" style="text-align:center; padding: 20px; color: var(--muted);">Presione Consultar para ver los datos</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
       
+      <!-- VISTA VENDEDOR -->
       <form id="order-form" class="workspace">
         <div class="column left-column">
           <section class="panel client-panel">
@@ -135,6 +192,7 @@
           <div class="order-actions">
             <button class="save-button" type="submit"><span>▣</span> Guardar orden</button>
             <button class="new-order-button" type="button" id="clear-order">Limpiar orden</button>
+            <button class="new-order-button" type="button" id="new-installation-order" style="display:none;">➕ Crear Nueva Orden</button>
           </div>
           
           <section class="panel services-panel">
@@ -158,6 +216,7 @@
         </div>
       </form>
       
+      <!-- VISTA TÉCNICO -->
       <section class="technician-section panel" id="technician-panel" hidden>
         <div class="panel-title">Datos para instalación</div>
         <div class="technical-details">
@@ -168,7 +227,8 @@
           
           <div class="panel-title" style="padding:0 0 10px">Detalle de llanta vieja</div>
           <label>Marca
-            <select class="brand-select">
+            <select class="brand-select" id="old-brand-select">
+              <option value="">Igual a nueva o seleccione...</option>
               <option>ENVOY</option><option>DAVANTI</option><option>Michelin</option>
               <option>Bridgestone</option><option>Goodyear</option><option>Otra marca</option>
             </select>
@@ -204,7 +264,6 @@
         </div>
         
         <button class="save-button technician-save" type="button" id="save-technician">Guardar orden de instalación</button>
-        <button class="new-order-button" type="button" id="new-installation-order">Nueva orden de instalación</button>
         <output id="technician-message" class="technician-message" aria-live="polite"></output>
       </section>
     </main>
@@ -217,9 +276,9 @@
       </div>
     </section>
     
-    <footer>llantas247.com · Sistema de Gestión de Taller <span>v2.4.1</span></footer>
+    <footer>llantas247.com · Sistema de Gestión de Taller <span>v2.6</span></footer>
   </div>
 
-  <script src="script.js?v=version-final-1"></script>
+  <script src="script.js"></script>
 </body>
 </html>
