@@ -1,7 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // =======================================================
-  // 1. VARIABLES GLOBALES Y ELEMENTOS DEL DOM
-  // =======================================================
   const loginContainer = document.getElementById('login-container');
   const appContainer = document.getElementById('app-container');
   const loginForm = document.getElementById('login-form');
@@ -38,7 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const saveTechnicianBtn = document.querySelector('#save-technician');
   const printBtn = document.querySelector('#print-order');
 
-  // Variables globales del buscador unificadas
   let lookupInput, loadOrderButton, lookupBranch, recentOrders, loadRecentOrderButton, lookupMessage;
 
   if (sessionStorage.getItem('llantas_auth_token')) mostrarApp();
@@ -121,9 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // =======================================================
-  // 2. REPORTERÍA Y EXCEL
-  // =======================================================
+  // REPORTERÍA Y EXCEL
   document.getElementById('btn-generar-reporte')?.addEventListener('click', async () => {
     const inicio = document.getElementById('rep-inicio').value;
     const fin = document.getElementById('rep-fin').value;
@@ -264,15 +258,12 @@ document.addEventListener('DOMContentLoaded', () => {
     invoicePanel.prepend(invoiceAccent);
   }
 
-  // =======================================================
-  // 3. BUSCADOR Y MAPA DE DAÑOS
-  // =======================================================
+  // BUSCADOR Y MAPA
   const lookupBox = document.createElement('div');
   lookupBox.className = 'order-lookup';
   lookupBox.innerHTML = '<label>Seleccionar sucursal<select id="lookup-branch"><option>Granados</option><option>Valle de los Chillos</option><option>Guayaquil</option></select></label><label>Órdenes recientes de la sucursal<select id="recent-orders"><option value="">Cargando órdenes...</option></select></label><button class="consent-button" type="button" id="load-recent-order">Cargar orden reciente</button><label>O buscar por número<input id="lookup-order-number" type="text" placeholder="#ORD-2026-0003"></label><button class="consent-button" type="button" id="load-order">Cargar orden</button><output class="technician-message" id="lookup-message" aria-live="polite"></output>';
   if(technicianPanel) technicianPanel.prepend(lookupBox);
   
-  // Inicializamos las referencias usando la caja creada
   lookupBranch = lookupBox.querySelector('#lookup-branch');
   recentOrders = lookupBox.querySelector('#recent-orders');
   loadRecentOrderButton = lookupBox.querySelector('#load-recent-order');
@@ -398,6 +389,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('#customer-email').value = order.correo || '';
         document.querySelector('#customer-phone').value = order.telefono || '';
         
+        // HEREDA EL CORREO A LOS CONSENTIMIENTOS DEL CLIENTE
+        const rowDatosEmail = document.querySelector('.consent-row[data-consent-id="client_datos"] .consent-email');
+        const rowReciclajeEmail = document.querySelector('.consent-row[data-consent-id="client_reciclaje"] .consent-email');
+        if(rowDatosEmail) rowDatosEmail.value = order.correo || '';
+        if(rowReciclajeEmail) rowReciclajeEmail.value = order.correo || '';
+
         if (salespersonSelect) {
           if ([...salespersonSelect.options].some((option) => option.value === order.asesor)) {
               salespersonSelect.value = order.asesor || '';
@@ -411,12 +408,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (order.instalacion) {
           const installation = order.instalacion;
           document.querySelector('#new-brand').value = installation.marca_llanta_nueva || '';
-          const newMeasure = (installation.medida_llanta_nueva || '').match(/^(\d+)\/(\d+)R(\d+)$/);
+          const newMeasureText = installation.medida_llanta_nueva || '';
+          const newMeasure = newMeasureText.match(/^(\d+)\/(\d+)R(\d+)$/);
           if (newMeasure) {
             document.querySelector('#tire-width').value = newMeasure[1];
             document.querySelector('#tire-height').value = newMeasure[2];
             document.querySelector('#tire-rim').value = newMeasure[3];
-            document.querySelector('#tire-result').textContent = installation.medida_llanta_nueva;
+            document.querySelector('#tire-result').textContent = newMeasureText;
+
+            // HEREDA LAS MEDIDAS A LA LLANTA VIEJA DEL TÉCNICO
+            document.querySelector('#old-tire-width').value = newMeasure[1];
+            document.querySelector('#old-tire-height').value = newMeasure[2];
+            document.querySelector('#old-tire-rim').value = newMeasure[3];
+            document.querySelector('#old-tire-result').textContent = newMeasureText;
           }
           document.querySelector('#tire-quantity').value = installation.cantidad_llantas ?? '';
           serviceInputs.forEach((input) => { input.checked = (installation.servicios || []).includes(input.value); });
@@ -426,17 +430,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const kmEl = document.querySelector('#technician-panel input[type="number"]');
           if (kmEl) kmEl.value = installation.kilometraje ?? '';
           
-          const oldMeasureText = installation.medida_llanta_vieja || '';
-          document.querySelector('#old-tire-result').textContent = oldMeasureText || '-';
-          const measure = oldMeasureText.match(/^(\d+)\/(\d+)R(\d+)$/);
-          if (measure) {
-            document.querySelector('#old-tire-width').value = measure[1];
-            document.querySelector('#old-tire-height').value = measure[2];
-            document.querySelector('#old-tire-rim').value = measure[3];
-          }
-          
           const oldBrandSelect = document.querySelector('#old-brand-select');
-          if(oldBrandSelect) oldBrandSelect.value = installation.marca_llanta_vieja || '';
+          if(oldBrandSelect) oldBrandSelect.value = installation.marca_llanta_vieja || installation.marca_llanta_nueva || '';
 
           const dotEl = document.querySelector('#manufacture-code');
           if (dotEl) dotEl.value = installation.codigo_dot || '';
@@ -460,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if(checklistStatus) checklistStatus.textContent = `${checklistInputs.filter((input) => input.checked).length} presentes`;
         if(invoicePanel) invoicePanel.hidden = true;
-        lookupMessage.textContent = `✓ Orden ${order.numero_orden} cargada.`;
+        lookupMessage.textContent = `✓ Orden ${order.numero_orden} cargada con éxito.`;
         
         updateOrderSummary();
         startConsentPolling(order.numero_orden);
@@ -471,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =======================================================
-  // 4. CONSENTIMIENTOS Y FIRMAS
+  // 4. CONSENTIMIENTOS Y FIRMAS (TÉCNICO TIENE BOTÓN DE APROBAR)
   // =======================================================
   const consentPanel = document.createElement('section');
   consentPanel.className = 'panel consent-panel';
@@ -497,10 +492,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const hideButtonStr = (id === 'client_reciclaje') ? 'style="display:none;"' : '';
     const userRole = sessionStorage.getItem('llantas_user_role');
+    
+    // 👉 PERMITE APROBACIÓN MANUAL A TÉCNICOS, ASESORES Y ADMINS EN TODAS LAS FILAS (INCLUYENDO CLIENTES)
     let showApproveBtn = false;
-    if (userRole === 'admin') showApproveBtn = true;
-    if (userRole === 'tecnico' && id.startsWith('client_')) showApproveBtn = true;
-    if (userRole === 'asesor' && id.startsWith('client_')) showApproveBtn = true;
+    if (userRole === 'admin' || userRole === 'tecnico' || userRole === 'asesor') showApproveBtn = true;
 
     const btnAprobarLocal = showApproveBtn 
       ? `<button type="button" class="btn-mini-action btn-approve local-approve-btn" style="background:#d1fae5; margin-left:5px;">Aprobar</button>` 
@@ -650,44 +645,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function showConsentToast(role, estado) {
-    const toast = document.createElement('div');
-    const esAprobado = estado === 'aprobado';
-    toast.style.cssText = `position:fixed;bottom:28px;right:28px;z-index:9999;padding:14px 20px;border-radius:10px;font:700 14px 'Space Grotesk',sans-serif;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.22);display:flex;align-items:center;gap:10px;transition:opacity .4s;background:${esAprobado ? '#00bd7b' : '#ed0010'}`;
-    toast.innerHTML = `<span style="font-size:20px">${esAprobado ? '✅' : '❌'}</span> <span>${role} ha <strong>${esAprobado ? 'APROBADO' : 'RECHAZADO'}</strong> la orden</span>`;
-    document.body.append(toast);
-    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 4500);
-  }
-
-  function syncConsentFromDB(consentimientosBD) {
-    if(!consentList) return;
-    let changed = false;
-    consentRows.forEach(({ id, role }) => {
-      const row = consentList.querySelector(`[data-consent-id="${id}"]`);
-      if (!row) return;
-      
-      let datosGuardados = consentimientosBD[id]; 
-      if (datosGuardados) {
-        const estadoBD = datosGuardados.estado;
-        let nuevoStatus = 'pending';
-        if (estadoBD === 'aprobado') nuevoStatus = 'approved';
-        else if (estadoBD === 'rechazado') nuevoStatus = 'rejected';
-        else if (estadoBD === 'notificado') nuevoStatus = 'notified';
-
-        if (row.dataset.status !== nuevoStatus && nuevoStatus !== 'pending') {
-          changed = true;
-          setConsentStatus(row, nuevoStatus);
-          if (estadoBD === 'aprobado' || estadoBD === 'rechazado') showConsentToast(role, estadoBD);
-        }
-      }
-    });
-    
-    if (changed) {
-      updateConsentState();
-      updateOrderSummary();
-    }
-  }
-
   function startConsentPolling(numeroOrden) {
     stopConsentPolling();
     consentPollingInterval = setInterval(async () => {
@@ -706,8 +663,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 5000);
   }
 
+  function syncConsentFromDB(consentimientosBD) {
+    if(!consentList) return;
+    let changed = false;
+    consentRows.forEach(({ id }) => {
+      const row = consentList.querySelector(`[data-consent-id="${id}"]`);
+      if (!row) return;
+      let datosGuardados = consentimientosBD[id]; 
+      if (datosGuardados) {
+        const estadoBD = datosGuardados.estado;
+        let nuevoStatus = 'pending';
+        if (estadoBD === 'aprobado') nuevoStatus = 'approved';
+        else if (estadoBD === 'rechazado') nuevoStatus = 'rejected';
+        else if (estadoBD === 'notificado') nuevoStatus = 'notified';
+
+        if (row.dataset.status !== nuevoStatus && nuevoStatus !== 'pending') {
+          changed = true;
+          setConsentStatus(row, nuevoStatus);
+        }
+      }
+    });
+    if (changed) {
+      updateConsentState();
+      updateOrderSummary();
+    }
+  }
+
   // =======================================================
-  // 5. VISTAS Y AUTO-COPIADO
+  // 5. VISTAS Y AUTO-COPIADO DE MEDIDAS Y CORREO
   // =======================================================
   document.querySelectorAll('.view-button').forEach((button) => {
     button.addEventListener('click', () => {
@@ -724,31 +707,33 @@ document.addEventListener('DOMContentLoaded', () => {
       if(headingKicker) headingKicker.textContent = technician ? 'Datos para instalación' : 'Formulario de creación';
       if(pageTitle) pageTitle.textContent = technician ? 'Información del técnico' : 'Nueva Orden de Servicio';
       
-      if (technician && document.querySelector('#old-tire-width') && !document.querySelector('#old-tire-width').value) {
-         document.querySelector('#old-tire-width').value = document.querySelector('#tire-width')?.value || '';
-         document.querySelector('#old-tire-height').value = document.querySelector('#tire-height')?.value || '';
-         document.querySelector('#old-tire-rim').value = document.querySelector('#tire-rim')?.value || '';
+      if (technician && document.querySelector('#old-tire-width')) {
+         const newW = document.querySelector('#tire-width')?.value || '';
+         const newH = document.querySelector('#tire-height')?.value || '';
+         const newR = document.querySelector('#tire-rim')?.value || '';
+         
+         document.querySelector('#old-tire-width').value = newW;
+         document.querySelector('#old-tire-height').value = newH;
+         document.querySelector('#old-tire-rim').value = newR;
+         document.querySelector('#old-tire-result').textContent = `${newW}/${newH}R${newR}`;
          
          const newBrand = document.querySelector('#new-brand')?.value || '';
          const oldBrandSelect = document.querySelector('#old-brand-select');
-         if(oldBrandSelect) {
-           if ([...oldBrandSelect.options].some(opt => opt.value === newBrand)) {
-               oldBrandSelect.value = newBrand;
-           } else if (newBrand) {
-               oldBrandSelect.value = 'Otra marca';
-               const customField = document.querySelector('#technician-panel .brand-custom input');
-               if(customField) {
-                 customField.value = newBrand;
-                 customField.closest('label').hidden = false;
-               }
-           }
+         if(oldBrandSelect && newBrand) oldBrandSelect.value = newBrand;
+
+         const clienteEmail = document.querySelector('#customer-email')?.value || '';
+         if(clienteEmail) {
+           const rDatos = document.querySelector('.consent-row[data-consent-id="client_datos"] .consent-email');
+           const rReciclaje = document.querySelector('.consent-row[data-consent-id="client_reciclaje"] .consent-email');
+           if(rDatos && !rDatos.value) rDatos.value = clienteEmail;
+           if(rReciclaje && !rReciclaje.value) rReciclaje.value = clienteEmail;
          }
-         document.querySelector('#old-tire-rim')?.dispatchEvent(new Event('input', { bubbles: true }));
       }
 
       if (technician) {
         if (!loadedOrder && statusNumber) statusNumber.textContent = 'Selecciona una orden';
-        if(lookupBranch && branchSelect) lookupBranch.value = branchSelect.value;
+        const currentLookupBranch = document.querySelector('#lookup-branch');
+        if(currentLookupBranch && branchSelect) currentLookupBranch.value = branchSelect.value;
         if(typeof loadRecentOrders === 'function') loadRecentOrders();
         if(technicianPanel) technicianPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
@@ -763,19 +748,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('#old-tire-result').textContent = `${document.querySelector('#old-tire-width')?.value || 0}/${document.querySelector('#old-tire-height')?.value || 0}R${document.querySelector('#old-tire-rim')?.value || 0}`;
   }));
 
-  const tireDimensionPairs = [['tire-width', 'old-tire-width'], ['tire-height', 'old-tire-height'], ['tire-rim', 'old-tire-rim']];
-  const oldTireDimensionsEdited = new Set();
-  tireDimensionPairs.forEach(([, oldId]) => {
-    document.querySelector(`#${oldId}`)?.addEventListener('input', () => oldTireDimensionsEdited.add(oldId));
-  });
-  tireDimensionPairs.forEach(([newId, oldId]) => {
-    document.querySelector(`#${newId}`)?.addEventListener('input', () => {
-      const oldInput = document.querySelector(`#${oldId}`);
-      if (oldInput && !oldTireDimensionsEdited.has(oldId)) oldInput.value = document.querySelector(`#${newId}`).value;
-      oldInput?.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-  });
-
   serviceInputs.forEach((input) => input.addEventListener('change', () => {
     updateSummary();
     updateConsentState();
@@ -785,36 +757,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const customerPhone = document.querySelector('#customer-phone');
   if (customerPhone) customerPhone.addEventListener('input', (event) => { event.target.value = event.target.value.replace(/\D/g, '').slice(0, 10); });
 
-  document.querySelectorAll('.brand-select').forEach((select) => {
-    select.addEventListener('change', () => {
-      const customBrand = select.closest('section, .technical-details')?.querySelector('.brand-custom');
-      if (customBrand) {
-        customBrand.hidden = select.value !== 'Otra marca';
-        if (!customBrand.hidden) customBrand.querySelector('input')?.focus();
-      }
-    });
-  });
-
-  if(checklistStatus) {
-    checklistInputs.forEach((input) => input.addEventListener('change', () => {
-      const completed = getPresentItems().length;
-      checklistStatus.textContent = `${completed} presente${completed === 1 ? '' : 's'}`;
-      checklistStatus.classList.toggle('complete', completed > 0);
-    }));
-    quantityInputs.forEach((input) => input.addEventListener('input', () => {
-      const checkbox = input.closest('.quantity-check')?.querySelector('input[type="checkbox"]');
-      if (checkbox) checkbox.checked = Number(input.value) > 0;
-      checklistInputs[0].dispatchEvent(new Event('change'));
-    }));
-  }
-
-  function getPresentItems() {
-    return checklistInputs.filter((input) => input.checked).map((input) => {
-      const quantity = input.closest('.quantity-check')?.querySelector('.item-quantity');
-      return quantity?.value ? `${input.value}: ${quantity.value}` : input.value;
-    });
-  }
-
   function updateSummary() {
     const selected = serviceInputs.filter((input) => input.checked).map((input) => input.value);
     if (otherService && otherService.value.trim()) selected.push(otherService.value.trim());
@@ -822,7 +764,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (summary) summary.innerHTML = selected.length ? selected.map((name) => `<div class="summary-row"><span>${name}</span><small>-</small></div>`).join('') : '<span>No hay servicios seleccionados</span>';
   }
 
-  // RESUMEN Y PDF
+  // =======================================================
+  // 6. RESUMEN Y PDF
+  // =======================================================
   function updateOrderSummary() {
     const newBrand = document.querySelector('#new-brand')?.value || '';
     const oldBrand = (document.querySelector('#technician-panel .brand-select'))?.value || '';
@@ -831,28 +775,26 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let pinsSummaryHtml = '';
     if(damagePins.length > 0) {
-      pinsSummaryHtml = damagePins.map(pin => `<div style="position:absolute; width:10px; height:10px; background:#ed0010; border:2px solid #fff; border-radius:50%; left:${pin.x}%; top:${pin.y}%; transform:translate(-50%,-50%); -webkit-print-color-adjust:exact; print-color-adjust:exact;"></div>`).join('');
+      pinsSummaryHtml = damagePins.map(pin => `<div style="position:absolute; width:8px; height:8px; background:#ed0010; border:1px solid #fff; border-radius:50%; left:${pin.x}%; top:${pin.y}%; transform:translate(-50%,-50%); -webkit-print-color-adjust:exact; print-color-adjust:exact;"></div>`).join('');
     }
-    const mapPreviewHtml = `<div style="position:relative; display:inline-block; border:1px solid #ccc; border-radius:4px; overflow:hidden; max-width:240px; background:#fff;"><img src="assets/images/mapa de daño.png" alt="Mapa de daños" style="display:block; width:100%; height:auto;" />${pinsSummaryHtml}</div>`;
+    const mapPreviewHtml = `<div style="position:relative; display:inline-block; border:1px solid #ccc; border-radius:4px; overflow:hidden; max-width:140px; background:#fff;"><img src="assets/images/mapa de daño.png" alt="Mapa" style="display:block; width:100%; height:auto;" />${pinsSummaryHtml}</div>`;
 
-    const presentItems = getPresentItems();
-    
+    const presentItems = checklistInputs.filter((input) => input.checked).map((input) => {
+      const quantity = input.closest('.quantity-check')?.querySelector('.item-quantity');
+      return quantity?.value ? `${input.value}: ${quantity.value}` : input.value;
+    });
+
     let firmasHtml = '';
     if (consentList) {
         const visibleConsentRows = Array.from(consentList.querySelectorAll('.consent-row:not([hidden])'));
         firmasHtml = visibleConsentRows.map(row => {
           const role = row.querySelector('.consent-role').textContent;
           const status = row.dataset.status;
+          let statusDisplay = 'Firma: _____________';
+          if (status === 'approved') statusDisplay = '<span style="color: #00bd7b; font-weight: bold;">✓ Aprobado</span>';
+          else if (status === 'rejected') statusDisplay = '<span style="color: #ed0010; font-weight: bold;">✗ Rechazado</span>';
           
-          let statusDisplay = '<br>Firma en físico: ___________________________________';
-          if (status === 'approved') statusDisplay = '<span style="color: #00bd7b; font-weight: bold; font-size: 13px;">✓ Aprobado y firmado digitalmente</span>';
-          else if (status === 'rejected') statusDisplay = '<span style="color: #ed0010; font-weight: bold;">✗ Rechazado digitalmente</span>';
-          else if (status === 'notified') statusDisplay = '<span style="color: #3b82f6;">⏳ Notificado (Esperando respuesta)</span><br><br>Firma en físico: ___________________________________';
-          
-          return `<div style="margin-bottom: 15px; font-size: 12px; border-bottom: 1px dashed #ccc; padding-bottom: 8px;">
-                    <strong style="color: #111827; text-transform: uppercase;">${role}:</strong><br>
-                    ${statusDisplay}
-                  </div>`;
+          return `<span style="display: inline-block; width: 48%; margin-bottom: 4px; font-size: 10px;"><strong>${role}:</strong> ${statusDisplay}</span>`;
         }).join('');
     }
 
@@ -860,35 +802,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const finalSalesperson = salespersonVal === 'Otro asesor' ? document.querySelector('#salesperson-custom-name')?.value : salespersonVal;
 
     const rows = [
-      ['Cliente', document.querySelector('#customer-name')?.value || ''],
-      ['Sucursal', branchSelect?.value || ''],
-      ['Correo electrónico', document.querySelector('#customer-email')?.value || ''],
-      ['Teléfono', document.querySelector('#customer-phone')?.value || ''],
-      ['Fecha', document.querySelector('#order-date')?.value || ''],
-      ['Asesor de ventas', finalSalesperson || ''],
-      ['Cantidad de llantas', document.querySelector('#tire-quantity')?.value || ''],
-      ['Llanta nueva', `${newBrand || 'No registrada'} - ${document.querySelector('#tire-result')?.textContent || '-'}`],
-      ['Servicios contratados', services.length ? services.join(', ') : 'Ninguno'],
-      ['Observaciones del vendedor', document.querySelector('.notes-panel textarea')?.value || ''],
-      ['Placa', document.querySelector('#license-plate')?.value || ''],
-      ['Kilometraje', document.querySelector('#technician-panel input[type="number"]')?.value || ''],
-      ['Llanta vieja', `${oldBrand || 'No registrada'} - ${document.querySelector('#old-tire-result')?.textContent || '-'}`],
-      ['Código DOT', document.querySelector('#manufacture-code')?.value || ''],
-      ['Elementos presentes al recibir', presentItems.length ? presentItems.join(', ') : 'Ninguno marcado'],
-      ['Mapa de daños del vehículo', (damagePins.length > 0) ? mapPreviewHtml : 'Sin daños reportados'],
-      ['Observaciones de ingreso', document.querySelector('.technical-notes')?.value || ''],
-      ['Firmas y Autorizaciones', firmasHtml || 'No hay responsables asignados']
+      ['Cliente / Sucursal', `${document.querySelector('#customer-name')?.value || 'N/A'} (Sucursal: ${branchSelect?.value || 'Granados'})`],
+      ['Contacto', `Email: ${document.querySelector('#customer-email')?.value || 'N/A'} | Tel: ${document.querySelector('#customer-phone')?.value || 'N/A'}`],
+      ['Fecha / Asesor', `Fecha: ${document.querySelector('#order-date')?.value || ''} | Asesor: ${finalSalesperson || ''}`],
+      ['Llantas y Servicios', `Nueva: ${newBrand} (${document.querySelector('#tire-result')?.textContent}) [Cant: ${document.querySelector('#tire-quantity')?.value || 1}]<br>Servicios: ${services.join(', ') || 'Ninguno'}`],
+      ['Inspección Vehicular', `Placa: ${document.querySelector('#license-plate')?.value || 'N/A'} | Km: ${document.querySelector('#technician-panel input[type="number"]')?.value || '0'}<br>Vieja: ${oldBrand} (${document.querySelector('#old-tire-result')?.textContent}) [DOT: ${document.querySelector('#manufacture-code')?.value || 'N/A'}]`],
+      ['Inventario / Daños', `Presentes: ${presentItems.join(', ') || 'Ninguno'}<br>Ingreso: ${document.querySelector('.technical-notes')?.value || 'Sin novedades'}`],
+      ['Mapa de Daños', damagePins.length > 0 ? mapPreviewHtml : 'Sin daños reportados'],
+      ['Firmas y Autorizaciones', firmasHtml || 'Pendiente de aprobación']
     ];
 
     const summaryBody = document.querySelector('#order-summary-body');
     if (summaryBody) {
-      summaryBody.innerHTML = rows.map(([label, value]) => `<tr><th>${label}</th><td>${value || 'No registrado'}</td></tr>`).join('');
+      summaryBody.innerHTML = rows.map(([label, value]) => `<tr><th style="width:28%; padding:4px 6px; font-size:9px;">${label}</th><td style="padding:4px 6px; font-size:10px;">${value}</td></tr>`).join('');
     }
     const summaryPanel = document.querySelector('#order-summary-panel');
     if (summaryPanel) summaryPanel.hidden = false;
   }
 
-  // BOTONES FINALES
+  // =======================================================
+  // 7. BOTONES FINALES Y VALIDACIÓN DIFERENCIADA
+  // =======================================================
   if (newInstallationOrderButton) {
     newInstallationOrderButton.innerHTML = '➕ Crear Nueva Orden';
     newInstallationOrderButton.style.display = 'inline-block';
@@ -896,6 +830,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (orderActions) orderActions.appendChild(newInstallationOrderButton);
   }
 
+  // Validación Ventas: Solo requiere la aprobación del asesor
   if(orderForm) {
     orderForm.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -967,6 +902,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Validación Técnico: Exige que absolutamente TODO esté aprobado
   if(saveTechnicianBtn) {
     saveTechnicianBtn.addEventListener('click', async () => {
       const message = document.querySelector('#technician-message');
@@ -983,8 +919,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const unapproved = visibleRows.filter((row) => row.dataset.status !== 'approved');
         
         if (unapproved.length > 0) {
+          const rolesFaltantes = unapproved.map(r => r.querySelector('.consent-role').textContent).join(', ');
           message.style.color = 'var(--red)';
-          message.textContent = '⚠️ Validaciones pendientes: Es necesario aprobar todos los consentimientos técnicos y del cliente para guardar el mapa de daños.';
+          message.textContent = `⚠️ Faltan firmas obligatorias por aprobar: [ ${rolesFaltantes} ]. Apruébelas antes de guardar la instalación.`;
           return;
         }
       }
@@ -1031,8 +968,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!window.confirm('Se limpiarán los datos de la pantalla para crear una nueva orden. La orden ya guardada no se borrará.')) return;
       
       sessionStorage.removeItem('activeOrderNumber');
-      
       if(orderForm) orderForm.reset();
+      
       if(technicianPanel) technicianPanel.querySelectorAll('input, textarea, select').forEach((field) => {
         if (field.type === 'checkbox') field.checked = false;
         else if (field.id !== 'license-plate') field.value = '';
@@ -1130,9 +1067,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const activeOrder = sessionStorage.getItem('activeOrderNumber');
-  if (activeOrder && lookupInput && loadOrderButton) {
-    lookupInput.value = activeOrder;
-    setTimeout(() => loadOrderButton.click(), 50);
+  const currentLookupInput = document.querySelector('#lookup-order-number');
+  const currentLoadOrderButton = document.querySelector('#load-order');
+  if (activeOrder && currentLookupInput && currentLoadOrderButton) {
+    currentLookupInput.value = activeOrder;
+    setTimeout(() => currentLoadOrderButton.click(), 50);
   } else {
     loadNextOrderNumber();
   }
