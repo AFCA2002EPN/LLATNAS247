@@ -29,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
       sessionStorage.setItem('llantas_user_role', data.rol);
       sessionStorage.setItem('llantas_user_name', data.usuario);
       
-      // Ocultar login y mostrar app de golpe de forma segura
       document.getElementById('login-container').style.display = 'none';
       document.getElementById('app-container').hidden = false;
       
@@ -50,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     location.reload();
   });
 
-function mostrarApp() {
+  function mostrarApp() {
     loginContainer.hidden = true;
     appContainer.hidden = false;
     
@@ -293,7 +292,7 @@ function mostrarApp() {
   const consentRows = [
     { id: 'client_datos', role: 'Cliente (Protección de Datos)', required: true },
     { id: 'client_reciclaje', role: 'Cliente (Reciclaje de Llantas)', required: true },
-    { id: 'advisor', role: 'Asesor de ventas', required: true, email: 'sistemas@llantas247.com' },
+    { id: 'advisor', role: 'Asesor de ventas', required: true, email: 'notificaciones@llantas247.com' },
     { id: 'tire-installer', role: 'Instalador de enllantaje', service: 'Enllantaje - Balanceo' },
     { id: 'alignment-installer', role: 'Instalador de alineación', service: 'Alineación' }
   ];
@@ -332,14 +331,15 @@ function mostrarApp() {
     if(rowReciclajeEmail) rowReciclajeEmail.value = event.target.value;
   });
   
-  async function notifyConsent(row, role) {
+ async function notifyConsent(row, role) {
     const email = row.querySelector('.consent-email').value.trim();
     if (!email) { 
       lookupMessage.textContent = `Escribe el correo de ${role}.`; 
       return; 
     }
     try {
-      if (row.dataset.consentId.startsWith('client_')) {
+      const consentId = row.dataset.consentId;
+      if (consentId.startsWith('client_')) {
         await fetch(`/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/client_datos`, { 
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correo: email }) 
         });
@@ -351,7 +351,8 @@ function mostrarApp() {
         setConsentStatus(document.querySelector('.consent-row[data-consent-id="client_reciclaje"]'), 'notified');
         lookupMessage.textContent = `✓ 2 correos de notificación enviados al cliente`;
       } else {
-        const response = await fetch(`/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/${row.dataset.consentId}`, { 
+        // Esto procesa correctamente al asesor (advisor) y a los instaladores
+        const response = await fetch(`/api/notificar-consentimiento/${encodeURIComponent(orderNumber)}/${consentId}`, { 
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correo: email }) 
         });
         const result = await response.json();
@@ -362,6 +363,13 @@ function mostrarApp() {
       }
       
       updateConsentState();
+      
+      // 👇 AQUÍ ESTÁ LA MAGIA 👇
+      // Encendemos el radar inmediatamente para que vigile si ya firmaron en el correo
+      if (!consentPollingInterval) {
+        startConsentPolling(orderNumber);
+      }
+      
     } catch (error) { 
       lookupMessage.textContent = `Error: ${error.message}`; 
     }
@@ -743,6 +751,18 @@ function mostrarApp() {
     event.preventDefault();
     const message = document.querySelector('#save-message');
     const submitButton = document.querySelector('#order-form .save-button');
+    
+    // Validar que la asesora haya aprobado su consentimiento desde el correo
+    const advisorRow = consentList.querySelector('[data-consent-id="advisor"]');
+    const advisorStatus = advisorRow ? advisorRow.dataset.status : 'pending';
+    
+    if (advisorStatus !== 'approved') {
+      message.style.color = 'var(--red)';
+      message.textContent = 'Esperando que la firma de la asesora sea aceptada';
+      message.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     if (orderSaved) {
       message.textContent = 'Esta orden ya fue guardada. Usa Nueva orden de instalación para crear otra.';
       return;
@@ -799,7 +819,6 @@ function mostrarApp() {
     }
     const oldTireBrand = (document.querySelector('#technician-panel .brand-select') || document.querySelector('.technical-details .brand-select'))?.value || '';
     
-    // Asegúrate de que incluya mapa_danos: damagePins
     const installationData = {
       placa: licensePlate.value.trim(),
       kilometraje: document.querySelector('#technician-panel input[type="number"]')?.value ? Number(document.querySelector('#technician-panel input[type="number"]').value) : null,
@@ -808,7 +827,7 @@ function mostrarApp() {
       codigo_dot: document.querySelector('#manufacture-code')?.value || '',
       elementos_presentes: getPresentItems(),
       observaciones_ingreso: document.querySelector('.technical-notes')?.value.trim() || '',
-      mapa_danos: damagePins // <--- Esto es lo que envía los puntos rojos a PostgreSQL
+      mapa_danos: damagePins 
     };
 
     saveButton.disabled = true;

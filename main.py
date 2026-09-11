@@ -33,6 +33,7 @@ class OrdenNueva(BaseModel):
     correo: str = ""
     telefono: str = ""
     asesor: str = ""
+    numero_orden: str | None = None
 
 class InstalacionOrden(BaseModel):
     placa: str = ""
@@ -43,7 +44,6 @@ class InstalacionOrden(BaseModel):
     elementos_presentes: list[str] = []
     observaciones_ingreso: str = ""
     mapa_danos: list = []  
-
 
 class NotificacionConsentimiento(BaseModel):
     correo: str
@@ -62,8 +62,8 @@ def conectar():
     )
 
 def enviar_correo(destinatario, asunto, contenido_texto, contenido_html=None):
-    remitente = "sistemas@llantas247.com" 
-    app_password = "sbrkrfigzaheyltl" 
+    remitente = "notificaciones@llantas247.com" 
+    app_password = "pssetwsknmsjfyrq" 
     
     mensaje = EmailMessage()
     mensaje["From"] = remitente
@@ -151,24 +151,44 @@ def guardar_orden(orden: OrdenNueva):
         conexion = conectar()
         with conexion.cursor() as cursor:
             preparar_tabla(cursor)
-            cursor.execute(
-                "SELECT %s || '-' || LPAD(nextval('ordenes_numero_seq')::text, 4, '0')",
-                (f"#ORD-{orden.fecha.year}",),
-            )
-            numero_orden = cursor.fetchone()[0]
-            cursor.execute(
-                """
-                INSERT INTO ordenes (fecha, sucursal, cliente, correo, telefono, asesor, numero_orden, instalacion)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb)
-                """,
-                (orden.fecha, orden.sucursal, orden.cliente, orden.correo, orden.telefono, orden.asesor, numero_orden, json.dumps({
-                    "marca_llanta_nueva": orden.marca_llanta_nueva,
-                    "medida_llanta_nueva": orden.medida_llanta_nueva,
-                    "cantidad_llantas": orden.cantidad_llantas,
-                    "servicios": orden.servicios,
-                    "observaciones_vendedor": orden.observaciones_vendedor,
-                })),
-            )
+            
+            numero_orden = orden.numero_orden
+            if not numero_orden or numero_orden == "#ORD-2026-0000":
+                cursor.execute(
+                    "SELECT %s || '-' || LPAD(nextval('ordenes_numero_seq')::text, 4, '0')",
+                    (f"#ORD-{orden.fecha.year}",),
+                )
+                numero_orden = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT id, instalacion FROM ordenes WHERE numero_orden = %s", (numero_orden,))
+            fila = cursor.fetchone()
+            
+            nueva_instalacion = {
+                "marca_llanta_nueva": orden.marca_llanta_nueva,
+                "medida_llanta_nueva": orden.medida_llanta_nueva,
+                "cantidad_llantas": orden.cantidad_llantas,
+                "servicios": orden.servicios,
+                "observaciones_vendedor": orden.observaciones_vendedor,
+            }
+
+            if fila:
+                cursor.execute(
+                    """
+                    UPDATE ordenes 
+                    SET fecha = %s, sucursal = %s, cliente = %s, correo = %s, telefono = %s, asesor = %s,
+                        instalacion = COALESCE(instalacion, '{}'::jsonb) || %s::jsonb
+                    WHERE numero_orden = %s
+                    """,
+                    (orden.fecha, orden.sucursal, orden.cliente, orden.correo, orden.telefono, orden.asesor, json.dumps(nueva_instalacion), numero_orden)
+                )
+            else:
+                cursor.execute(
+                    """
+                    INSERT INTO ordenes (fecha, sucursal, cliente, correo, telefono, asesor, numero_orden, instalacion)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+                    """,
+                    (orden.fecha, orden.sucursal, orden.cliente, orden.correo, orden.telefono, orden.asesor, numero_orden, json.dumps(nueva_instalacion)),
+                )
         conexion.commit()
         return {"mensaje": "Orden guardada exitosamente en PostgreSQL", "numero_orden": numero_orden}
     except psycopg2.Error as error:
@@ -278,12 +298,22 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
     try:
         conexion = conectar()
         with conexion.cursor() as cursor:
+            preparar_tabla(cursor)
             cursor.execute("SELECT cliente, instalacion FROM ordenes WHERE numero_orden = %s", (numero_orden,))
             fila = cursor.fetchone()
-            if not fila:
-                raise HTTPException(status_code=404, detail="No se encontró la orden indicada.")
             
-            cliente_nombre = fila[0]
+            if not fila:
+                cursor.execute(
+                    """
+                    INSERT INTO ordenes (fecha, sucursal, cliente, correo, numero_orden, instalacion)
+                    VALUES (CURRENT_DATE, 'Granados', 'Cliente en trámite', %s, %s, '{}'::jsonb)
+                    """,
+                    (notificacion.correo, numero_orden)
+                )
+                cursor.execute("SELECT cliente, instalacion FROM ordenes WHERE numero_orden = %s", (numero_orden,))
+                fila = cursor.fetchone()
+            
+            cliente_nombre = fila[0] or "Cliente"
             datos = fila[1] or {}
             tokens = datos.get("consentimientos", {})
             token = secrets.token_urlsafe(32)
@@ -293,7 +323,7 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
             cursor.execute("UPDATE ordenes SET instalacion = %s::jsonb WHERE numero_orden = %s", (json.dumps(datos), numero_orden))
         conexion.commit()
         
-        public_url = os.getenv("LLANTAS_PUBLIC_URL", "http://localhost:8000")
+        public_url = os.getenv("LLANTAS_PUBLIC_URL", "http://localhost:8001")
         aceptar = f"{public_url}/api/consentimiento/{token}/aprobado"
         rechazar = f"{public_url}/api/consentimiento/{token}/rechazado"
         
@@ -346,7 +376,7 @@ def notificar_consentimiento(numero_orden: str, responsable: str, notificacion: 
               </div>
               <div style="padding: 30px 20px;">
                 <h2 style="color: #111827; margin-top: 0; text-align: center;">Autorización de Orden {numero_orden}</h2>
-                <p style="color: #4b5563; line-height: 1.5; font-size: 15px; text-align: center;">Se requiere su revisión y aprobación para continuar con esta orden.</p>
+                <p style="color: #4b5563; line-height: 1.5; font-size: 15px; text-align: center;">Estimado/a Asesor/a, se requiere su revisión y aprobación para continuar con esta orden.</p>
                 <div style="text-align: center; margin-top: 30px;">
                   <a href="{aceptar}" style="display: inline-block; background-color: #00bd7b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; margin-right: 15px; font-size: 15px;">Aprobar Orden</a>
                   <a href="{rechazar}" style="display: inline-block; background-color: #f3f4f6; color: #4b5563; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 15px; border: 1px solid #d1d5db;">Rechazar</a>
@@ -378,44 +408,59 @@ def responder_consentimiento(token: str, estado: str):
         conexion = conectar()
         with conexion.cursor() as cursor:
             cursor.execute("SELECT numero_orden, instalacion FROM ordenes WHERE instalacion ? 'consentimientos'")
-            fila = next((row for row in cursor.fetchall() if any(item.get("token") == token for item in (row[1] or {}).get("consentimientos", {}).values())), None)
+            filas = cursor.fetchall()
             
-            if not fila:
-                raise HTTPException(status_code=404, detail="Enlace de consentimiento no válido.")
+            fila_encontrada = None
+            responsable_encontrado = None
+            datos_json = None
             
-            datos = fila[1] or {}
-            responsable_nombre = ""
-            for r_key, consentimiento in datos.get("consentimientos", {}).items():
-                if consentimiento.get("token") == token:
-                    if consentimiento.get("estado") in {"aprobado", "rechazado"}:
-                        return HTMLResponse(content=f"""
-                        <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #f8fafc;">
-                            <h2 style="color: #2563eb;">Esta autorización ya fue procesada</h2>
-                            <p>El estado registrado es: <strong>{consentimiento.get("estado").capitalize()}</strong>.</p>
-                            <p style="color: #64748b; font-size: 14px; margin-top: 20px;">Ya puedes cerrar esta ventana.</p>
-                        </body></html>
-                        """, status_code=200)
-                    
-                    consentimiento["estado"] = estado
-                    responsable_nombre = r_key
+            for row in filas:
+                num_ord = row[0]
+                inst = row[1] or {}
+                consentimientos = inst.get("consentimientos", {})
+                for r_key, c_data in consentimientos.items():
+                    if c_data.get("token") == token:
+                        fila_encontrada = num_ord
+                        responsable_encontrado = r_key
+                        datos_json = inst
+                        break
+                if fila_encontrada:
                     break
             
-            cursor.execute("UPDATE ordenes SET instalacion = %s::jsonb WHERE numero_orden = %s", (json.dumps(datos), fila[0]))
+            if not fila_encontrada:
+                raise HTTPException(status_code=404, detail="Enlace de consentimiento no válido.")
+            
+            consentimiento_actual = datos_json["consentimientos"][responsable_encontrado]
+            if consentimiento_actual.get("estado") in {"aprobado", "rechazado"}:
+                return HTMLResponse(content=f"""
+                <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #f8fafc;">
+                    <h2 style="color: #2563eb;">Esta autorización ya fue procesada</h2>
+                    <p>El estado registrado es: <strong>{consentimiento_actual.get("estado").capitalize()}</strong>.</p>
+                    <p style="color: #64748b; font-size: 14px; margin-top: 20px;">Ya puedes cerrar esta ventana.</p>
+                </body></html>
+                """, status_code=200)
+            
+            consentimiento_actual["estado"] = estado
+            
+            cursor.execute("UPDATE ordenes SET instalacion = %s::jsonb WHERE numero_orden = %s", (json.dumps(datos_json), fila_encontrada))
         conexion.commit()
         
-        if responsable_nombre == "client_datos":
+        if responsable_encontrado == "client_datos":
             titulo = f"Protección de Datos {estado.capitalize()}"
-        elif responsable_nombre == "client_reciclaje":
+        elif responsable_encontrado == "client_reciclaje":
             titulo = f"Reciclaje de Llantas {estado.capitalize()}"
         else:
-            titulo = f"Orden {estado.capitalize()} con éxito"
+            titulo = f"Orden de Servicio {estado.capitalize()}"
             
         html_respuesta = f"""
-        <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #f8fafc;">
-            <h2 style="color: {'#00bd7b' if estado == 'aprobado' else '#ed0010'};">
-                {titulo}
-            </h2>
-            <p>Ya puedes cerrar esta ventana. Tu respuesta ha sido enviada al taller.</p>
+        <html><body style="font-family: Arial; text-align: center; padding: 50px; background: #f8fafc; font-family: 'Space Grotesk', sans-serif;">
+            <div style="max-width: 500px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                <h2 style="color: {'#00bd7b' if estado == 'aprobado' else '#ed0010'}; margin-top: 0; font-size: 24px;">
+                    {titulo}
+                </h2>
+                <p style="color: #4b5563; font-size: 15px; line-height: 1.5;">Su respuesta ha sido registrada exitosamente en el sistema del taller.</p>
+                <p style="color: #7890b0; font-size: 13px; margin-top: 25px;">Ya puedes cerrar esta ventana de forma segura.</p>
+            </div>
         </body></html>
         """
         return HTMLResponse(content=html_respuesta, status_code=200)
@@ -427,5 +472,4 @@ def responder_consentimiento(token: str, estado: str):
         if conexion:
             conexion.close()
 
-# MONTAR LOS ARCHIVOS ESTÁTICOS AL FINAL DE TODO
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
